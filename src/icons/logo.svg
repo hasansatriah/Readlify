@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FAF3E7"/>
+      <stop offset="1" stop-color="#EFE2C9"/>
+    </linearGradient>
+    <linearGradient id="cover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8CAB80"/>
+      <stop offset="1" stop-color="#5F7A56"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square backdrop (squircle-ish), matches the app's cozy palette -->
+  <rect x="4" y="4" width="248" height="248" rx="58" fill="url(#bg)"/>
+  <rect x="4" y="4" width="248" height="248" rx="58" fill="none" stroke="#3A3530" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- page-edge stack, peeking out from under the cover -->
+  <rect x="70" y="76" width="116" height="112" rx="6" fill="#FDFBF6"/>
+  <rect x="70" y="76" width="116" height="112" rx="6" fill="none" stroke="#3A3530" stroke-opacity="0.10" stroke-width="2"/>
+  <path d="M74 84h108M74 96h108M74 178h108" stroke="#3A3530" stroke-opacity="0.08" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- book cover -->
+  <path d="M62 72 C62 66 66 62 72 62 L172 62 C178 62 182 66 182 72 L182 186 C182 192 178 196 172 196 L72 196 C66 196 62 192 62 186 Z"
+        fill="url(#cover)"/>
+  <!-- spine shading -->
+  <path d="M72 62 L86 62 L86 196 L72 196 C66 196 62 192 62 186 L62 72 C62 66 66 62 72 62 Z" fill="#000000" fill-opacity="0.08"/>
+  <!-- cover highlight -->
+  <path d="M72 62 L172 62 C178 62 182 66 182 72 L182 82 L62 82 L62 72 C62 66 66 62 72 62 Z" fill="#FFFFFF" fill-opacity="0.14"/>
+
+  <!-- title rule on the cover -->
+  <path d="M104 118h56M104 134h56M104 150h34" stroke="#FDFBF6" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- bookmark ribbon -->
+  <path d="M148 62 L148 108 L136 96 L124 108 L124 62 Z" fill="#E3A857"/>
+</svg>

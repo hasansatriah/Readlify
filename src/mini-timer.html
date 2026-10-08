@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+<title>Readlify — Pomodoro</title>
+<style>
+  :root{
+    --cream:#F7F1E7; --ink:#3A3530; --sage:#7C9473; --sage-dk:#5F7A56; --clay:#D98C7A;
+  }
+  html,body{ margin:0; padding:0; background:transparent; height:100%; }
+  * { box-sizing:border-box; font-family: -apple-system, "SF Pro Text", ui-rounded, "Segoe UI", Inter, sans-serif; }
+
+  /* The whole card is a drag handle by default so the widget can be moved from
+     anywhere; every interactive element below explicitly opts back OUT with
+     no-drag, on the element itself (not just a wrapping div), since that is
+     the reliable way to guarantee it stays clickable across platforms. */
+  .card{
+    position: relative;
+    -webkit-app-region: drag;
+    height:100%;
+    background: rgba(247,241,231,0.92);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(58,53,48,0.08);
+    border-radius: 20px;
+    padding: 14px 16px 12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    box-shadow: 0 10px 30px rgba(58,53,48,0.18);
+  }
+  .mode{ font-size:12px; font-weight:600; letter-spacing:.2px; color: var(--sage-dk); }
+  .time{ font-size:38px; font-weight:650; color:var(--ink); font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  .controls{ display:flex; gap:8px; }
+
+  button{
+    -webkit-app-region: no-drag; /* set directly on every clickable element */
+    border:none; cursor:pointer; border-radius:12px; padding:7px 13px; font-size:12.5px; font-weight:600;
+    background: rgba(58,53,48,0.08); color:var(--ink);
+    position: relative; z-index: 2;
+  }
+  button:active{ transform: scale(.96); }
+  button.primary{ background: var(--sage); color:white; }
+  button.close{
+    position:absolute; top:6px; right:8px; width:22px; height:22px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; color:rgba(58,53,48,0.45); font-size:13px; border-radius:50%;
+  }
+  button.close:hover{ background: rgba(58,53,48,0.08); color: var(--ink); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <button class="close" id="btnClose" title="Tutup widget">✕</button>
+    <span class="mode" id="mode">Fokus</span>
+    <span class="time" id="time">25:00</span>
+    <div class="controls">
+      <button id="btnPause">Jeda</button>
+      <button class="primary" id="btnSkip">Lewati</button>
+    </div>
+  </div>
+<script src="mini-timer-renderer.js"></script>
+</body>
+</html>

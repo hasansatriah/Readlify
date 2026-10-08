@@ -1,0 +1,13 @@
+# Dependensi & hasil build (jangan di-commit, bisa ratusan MB)
+node_modules/
+dist/
+out/
+
+# Rahasia & konfigurasi lokal
+.env
+.env.*
+
+# Sampah sistem & log
+*.log
+.DS_Store
+Thumbs.db

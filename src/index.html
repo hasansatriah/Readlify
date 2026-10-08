@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+<title>Readlify</title>
+<link rel="icon" type="image/svg+xml" href="icons/logo.svg" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="titlebar-spacer" id="titlebarSpacer"></div>
+
+  <div class="shell">
+
+    <!-- ============ SIDEBAR ============ -->
+    <nav class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="icons/logo.svg" alt="Logo Readlify" />
+        <span class="brand-name">Readlify</span>
+      </div>
+
+      <button class="nav-item is-active" data-view="beranda">
+        <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5M6 10v9h5v-5h2v5h5v-9"/></svg>
+        <span>Beranda</span>
+      </button>
+      <button class="nav-item" data-view="tugas">
+        <svg viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="15" height="15" rx="4"/><path d="m8.5 12.5 2.4 2.4L16 10"/></svg>
+        <span>Tugas</span>
+        <span class="nav-badge" id="navTugasBadge">0</span>
+      </button>
+      <button class="nav-item" data-view="pomodoro">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 1.6M9.8 3.5h4.4M12 3.5V5"/></svg>
+        <span>Pomodoro</span>
+      </button>
+      <button class="nav-item" data-view="sitasi">
+        <svg viewBox="0 0 24 24"><path d="M6 4.5h9.5A2.5 2.5 0 0 1 18 7v13l-3-2-3 2-3-2-3 2V7A2.5 2.5 0 0 1 6 4.5Z"/><path d="M8.2 8.5h5.8M8.2 11.5h5.8"/></svg>
+        <span>Daftar Pustaka</span>
+      </button>
+      <button class="nav-item" data-view="catatan">
+        <svg viewBox="0 0 24 24"><path d="M6 4.5h9l3.5 3.5V19a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5Z"/><path d="M15 4.5V8h3.5M8.3 12h7M8.3 15h5"/></svg>
+        <span>Catatan Cepat</span>
+      </button>
+      <button class="nav-item" data-view="panduan">
+        <svg viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="12" height="17" rx="1.5"/><path d="M8 8h5M8 11h5M8 14h3"/><path d="M16.5 6 19.5 7v11l-3-1"/></svg>
+        <span>Panduan Format</span>
+      </button>
+
+      <div class="sidebar-spacer"></div>
+
+      <button class="nav-item nav-donate" type="button" data-donate-open>
+        <svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.8-9C.6 8 2.3 4.5 5.8 4.5c2 0 3.5 1 4.9 2.8 1.4-1.8 2.9-2.8 4.9-2.8 3.5 0 5.2 3.5 3.6 7-2.3 4.4-7.2 9-7.2 9Z"/></svg>
+        <span>Dukung Readlify</span>
+      </button>
+
+      <button class="nav-item" data-view="pengaturan">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6"/><path d="M12 4.6v1.8M12 17.6v1.8M19.4 12h-1.8M6.4 12H4.6M17.1 6.9l-1.3 1.3M8.2 15.8l-1.3 1.3M17.1 17.1l-1.3-1.3M8.2 8.2 6.9 6.9"/></svg>
+        <span>Pengaturan</span>
+      </button>
+    </nav>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="content">
+
+      <!-- ---------- BERANDA ---------- -->
+      <section class="view is-active" id="view-beranda">
+        <header class="view-header">
+          <h1 id="greeting">Halo!</h1>
+          <p class="subtitle" id="todayLine"></p>
+        </header>
+
+        <div class="grid grid-3">
+          <div class="card stat-card">
+            <span class="stat-label">Tugas aktif</span>
+            <span class="stat-value" id="statActiveTasks">0</span>
+            <span class="stat-foot">belum selesai</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Sesi fokus hari ini</span>
+            <span class="stat-value" id="statSessionsToday">0</span>
+            <span class="stat-foot" id="statMinutesToday">0 menit</span>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Deret harian</span>
+            <span class="stat-value" id="statStreak">0</span>
+            <span class="stat-foot" id="statStreakFoot">hari berturut-turut</span>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2>Tugas terdekat</h2>
+              <button class="btn-ghost" data-goto="tugas">Lihat semua</button>
+            </div>
+            <ul class="mini-list" id="homeTaskList">
+              <!-- filled by JS -->
+            </ul>
+            <p class="empty-hint" id="homeTaskEmpty" hidden>Belum ada tugas. Tambahkan satu untuk memulai.</p>
+          </div>
+
+          <div class="card cozy-check">
+            <div class="card-head"><h2>Kondisimu hari ini</h2></div>
+            <p class="hint-text">Sebelum mulai, bagaimana perasaanmu saat ini? Jawabanmu hanya tersimpan di perangkatmu.</p>
+            <div class="mood-row" id="moodRow">
+              <button class="mood-btn" data-mood="lelah">😴<span>Lelah</span></button>
+              <button class="mood-btn" data-mood="biasa">🙂<span>Biasa</span></button>
+              <button class="mood-btn" data-mood="semangat">🔥<span>Semangat</span></button>
+              <button class="mood-btn" data-mood="cemas">🌧️<span>Cemas</span></button>
+            </div>
+            <p class="mood-note" id="moodNote"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- TUGAS ---------- -->
+      <section class="view" id="view-tugas">
+        <header class="view-header row">
+          <div>
+            <h1>Tugas</h1>
+            <p class="subtitle">Praktikum, makalah, dan tugas lainnya — termasuk yang belum resmi diberikan tapi sudah bisa diperkirakan akan ada. Pecah menjadi langkah-langkah kecil supaya tidak terasa berat; kosongkan tenggatnya dulu kalau belum pasti.</p>
+          </div>
+          <button class="btn-primary" id="btnAddTask">+ Tambah tugas</button>
+        </header>
+
+        <div class="filter-row">
+          <button class="chip is-active" data-filter="semua">Semua</button>
+          <button class="chip" data-filter="praktikum">Praktikum</button>
+          <button class="chip" data-filter="makalah">Makalah</button>
+          <button class="chip" data-filter="tugas">Tugas biasa</button>
+          <button class="chip" data-filter="lainnya">Lainnya</button>
+          <span class="filter-spacer"></span>
+          <button class="chip chip-muted" data-filter-done="toggle" id="chipShowDone">Tampilkan yang sudah selesai</button>
+        </div>
+
+        <div class="task-columns" id="taskBoard">
+          <!-- columns filled by JS -->
+        </div>
+      </section>
+
+      <!-- ---------- POMODORO ---------- -->
+      <section class="view" id="view-pomodoro">
+        <header class="view-header">
+          <h1>Pomodoro</h1>
+          <p class="subtitle">Fokus sebentar, istirahat secukupnya. Widget dapat dilepas ke luar jendela supaya timer tetap terlihat saat kamu berpindah aplikasi.</p>
+        </header>
+
+        <div class="grid grid-2">
+          <div class="card timer-card">
+            <div class="timer-ring-wrap">
+              <svg class="timer-ring" viewBox="0 0 200 200">
+                <circle class="ring-track" cx="100" cy="100" r="88"/>
+                <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="88"/>
+              </svg>
+              <div class="timer-center">
+                <span class="timer-time" id="timerTime">25:00</span>
+                <span class="timer-mode" id="timerMode">Fokus</span>
+              </div>
+            </div>
+
+            <div class="timer-controls">
+              <button class="btn-ghost" id="btnResetTimer">Ulangi</button>
+              <button class="btn-primary btn-lg" id="btnStartPause">Mulai</button>
+              <button class="btn-ghost" id="btnSkipTimer">Lewati</button>
+            </div>
+
+            <button class="btn-secondary" id="btnToggleBrainDump">Ada pikiran yang mengganggu?</button>
+            <div class="brain-dump-box" id="brainDumpWrap" hidden>
+              <label>Tulis di sini dulu, urus nanti.</label>
+              <textarea id="pomodoroBrainDump" rows="3" placeholder="Tulis, lalu lupakan sejenak…"></textarea>
+            </div>
+            <button class="btn-secondary" id="btnOpenMiniWidget">Buka widget mengambang</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Atur sesi</h2></div>
+            <div class="field-row">
+              <label>Fokus</label>
+              <div class="mmss-row">
+                <input type="number" id="cfgWorkMin" min="0" max="90" step="1" /><span class="mmss-unit">mnt</span>
+                <input type="number" id="cfgWorkSec" min="0" max="59" step="1" /><span class="mmss-unit">dtk</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Istirahat pendek</label>
+              <div class="mmss-row">
+                <input type="number" id="cfgShortMin" min="0" max="30" step="1" /><span class="mmss-unit">mnt</span>
+                <input type="number" id="cfgShortSec" min="0" max="59" step="1" /><span class="mmss-unit">dtk</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Istirahat panjang</label>
+              <div class="mmss-row">
+                <input type="number" id="cfgLongMin" min="0" max="60" step="1" /><span class="mmss-unit">mnt</span>
+                <input type="number" id="cfgLongSec" min="0" max="59" step="1" /><span class="mmss-unit">dtk</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Sesi sebelum istirahat panjang</label>
+              <input type="number" id="cfgCycles" min="2" max="8" step="1" />
+            </div>
+            <p class="hint-text" style="margin-top:10px">Kaitkan sesi ini ke tugas supaya waktumu tercatat:</p>
+            <select id="cfgLinkedTask"><option value="">Tidak dikaitkan</option></select>
+
+            <div class="card-head" style="margin-top:22px"><h2>Riwayat hari ini</h2></div>
+            <ul class="mini-list" id="pomodoroHistory"></ul>
+            <p class="empty-hint" id="pomodoroHistoryEmpty">Belum ada sesi yang selesai hari ini.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- DAFTAR PUSTAKA (generator sitasi APA) ---------- -->
+      <section class="view" id="view-sitasi">
+        <header class="view-header">
+          <h1>Daftar Pustaka (APA 7th Edition)</h1>
+          <p class="subtitle">Format otomatis mengikuti gaya Harvard–APA 7th edition yang umum dipakai banyak kampus. Isi yang kamu punya, sisanya diatur otomatis.</p>
+        </header>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head"><h2>Sumber baru</h2></div>
+            <p class="hint-text">Semua kolom bersifat opsional. Isi yang kamu ketahui saja; sisanya boleh dikosongkan.</p>
+
+            <div class="field-row">
+              <label>Jenis sumber</label>
+              <select id="citeType">
+                <option value="buku">Buku</option>
+                <option value="terjemahan">Buku/karya terjemahan</option>
+                <option value="jurnal">Artikel jurnal</option>
+                <option value="prosiding">Artikel prosiding/seminar</option>
+                <option value="skripsi">Skripsi/Tesis/Disertasi</option>
+                <option value="internet">Artikel internet</option>
+              </select>
+            </div>
+
+            <div class="field-row">
+              <label>Penulis (satu per baris: nama belakang, inisial)</label>
+              <textarea id="citeAuthors" rows="2" placeholder="Contoh:&#10;Fatisa, Y.&#10;Irawan, H."></textarea>
+            </div>
+            <div class="field-row two-col">
+              <div>
+                <label>Tahun</label>
+                <input type="text" id="citeYear" placeholder="2024" />
+              </div>
+              <div>
+                <label>Judul</label>
+                <input type="text" id="citeTitle" placeholder="Judul artikel/buku/skripsi" />
+              </div>
+            </div>
+
+            <div id="citeExtraFields"></div>
+
+            <button class="btn-primary" id="btnAddCitation" style="margin-top:6px">Tambah ke daftar pustaka</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Daftar pustaka</h2>
+              <button class="btn-ghost" id="btnCopyAllCitations">Salin semua</button>
+            </div>
+            <p class="hint-text">Klik salah satu entri untuk menyalin kutipan dalam teksnya.</p>
+            <ul class="citation-list" id="citationList"></ul>
+            <p class="empty-hint" id="citationEmpty">Daftar pustaka masih kosong. Tambahkan satu sumber di formulir samping.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- CATATAN CEPAT ---------- -->
+      <section class="view" id="view-catatan">
+        <header class="view-header">
+          <h1>Catatan Cepat</h1>
+          <p class="subtitle">Tempat menuliskan pikiran acak supaya tidak mengganggu fokusmu.</p>
+        </header>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="field-row">
+              <textarea id="noteInput" rows="3" placeholder="Ketik lalu tekan Enter untuk menyimpan…"></textarea>
+            </div>
+            <button class="btn-primary" id="btnAddNote">Simpan catatan</button>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Semua catatan</h2></div>
+            <ul class="mini-list" id="noteList"></ul>
+            <p class="empty-hint" id="noteEmpty">Belum ada catatan.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- PANDUAN FORMAT ---------- -->
+      <section class="view" id="view-panduan">
+        <header class="view-header">
+          <h1>Panduan Format Cepat</h1>
+          <p class="subtitle">Ringkasan aturan pengetikan dan sitasi yang umum dipakai di pedoman skripsi banyak kampus, supaya kamu tidak perlu berulang kali membuka PDF pedoman saat mengerjakan makalah atau skripsi.</p>
+        </header>
+
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="card-head"><h2>Pengetikan</h2></div>
+            <ul class="fact-list">
+              <li><strong>Kertas</strong><span>A4</span></li>
+              <li><strong>Font</strong><span>Times New Roman 12pt</span></li>
+              <li><strong>Spasi</strong><span>1,5</span></li>
+              <li><strong>Margin (kiri-atas-kanan-bawah)</strong><span>4-3-3-3 cm</span></li>
+              <li><strong>Jarak antar paragraf</strong><span>After 0</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Sistem sitasi</h2></div>
+            <p class="hint-text">Banyak kampus di Indonesia memakai sistem <strong>Harvard (nama–tahun)</strong> dengan gaya <strong>APA 7th edition</strong>. Kutipan tidak langsung (parafrasa) umumnya jadi format yang disarankan, bukan kutipan langsung.</p>
+            <ul class="fact-list">
+              <li><strong>2 penulis</strong><span>(x dan y 2012)</span></li>
+              <li><strong>&gt;3 penulis</strong><span>(x dkk., tahun)</span></li>
+              <li><strong>2 sumber, penulis sama, tahun sama</strong><span>(x 2017a, 2017b)</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Sumber yang bisa dipercaya</h2></div>
+            <ul class="fact-list-simple">
+              <li>Jurnal ilmiah terindeks Sinta/Scopus</li>
+              <li>Buku, monograf, prosiding resmi</li>
+              <li>Situs .go.id / .ac.id / .edu</li>
+              <li>Terbitan maksimal ±10 tahun terakhir</li>
+            </ul>
+            <p class="hint-text" style="margin-top:10px">Hindari Wikipedia dan situs .com/.org/.net tanpa penulis jelas sebagai rujukan utama.</p>
+          </div>
+        </div>
+        <p class="hint-text" style="margin-top:14px">Ini rangkuman aturan yang paling umum. Tetap periksa pedoman resmi kampus atau program studimu untuk detail yang mungkin berbeda.</p>
+      </section>
+
+      <!-- ---------- PENGATURAN ---------- -->
+      <section class="view" id="view-pengaturan">
+        <header class="view-header">
+          <h1>Pengaturan</h1>
+        </header>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head"><h2>Profil</h2></div>
+            <div class="field-row">
+              <label>Nama panggilan</label>
+              <input type="text" id="cfgUserName" maxlength="40" placeholder="Misalnya: Dinda" />
+            </div>
+            <div class="field-row" style="align-items:center;gap:10px">
+              <button class="btn-primary" id="btnSaveUserName" type="button">Simpan nama</button>
+              <span class="hint-text" id="cfgUserNameStatus" style="margin:0"></span>
+            </div>
+            <p class="hint-text">Nama ini hanya dipakai untuk sapaan di Beranda dan disimpan di perangkatmu.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Tampilan</h2></div>
+            <div class="field-row">
+              <label>Tema</label>
+              <select id="cfgTheme">
+                <option value="cozy-light">Terang</option>
+                <option value="cozy-dark">Gelap</option>
+                <option value="system">Ikuti sistem</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Suara Alarm Pomodoro</h2></div>
+            <div class="field-row">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgSoundEnabled" />
+                <span>🔔 Bunyikan alarm saat sesi atau istirahat selesai</span>
+              </label>
+            </div>
+            <div class="field-row">
+              <label>Volume</label>
+              <div class="volume-row">
+                <span>🔈</span>
+                <input type="range" id="cfgSoundVolume" min="0" max="100" step="5" />
+                <span>🔊</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Jenis suara</label>
+              <select id="cfgSoundPreset"></select>
+            </div>
+            <button class="btn-ghost" id="btnTestSound" type="button">🔊 Coba suara</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Pengingat</h2></div>
+            <p class="hint-text">Pengingat dirancang supaya tidak terasa mengganggu: setiap pengingat hanya muncul sekali per jadwal, dan kalimatnya diganti-ganti supaya tidak mudah diabaikan.</p>
+
+            <div class="field-row">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgStudyReminderEnabled" />
+                <span>📚 Pengingat jam belajar</span>
+              </label>
+            </div>
+            <div class="time-chip-row">
+              <input type="time" id="cfgStudyTimeInput" />
+              <button class="btn-ghost" id="btnAddStudyTime" type="button">+ Tambah jam</button>
+            </div>
+            <div class="time-chip-list" id="studyTimeList"></div>
+            <p class="empty-hint" id="studyTimeEmpty" style="margin-top:-4px">Belum ada jam belajar yang diatur.</p>
+
+            <div class="field-row" style="margin-top:14px">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgIdleNudgeEnabled" />
+                <span>🌱 Dorongan lembut jika belum mulai mengerjakan apa pun</span>
+              </label>
+            </div>
+            <div class="field-row">
+              <label>Ingatkan setiap</label>
+              <select id="cfgIdleNudgeMinutes">
+                <option value="20">20 menit</option>
+                <option value="30">30 menit</option>
+                <option value="45">45 menit</option>
+                <option value="60">60 menit</option>
+              </select>
+            </div>
+
+            <div class="field-row" style="margin-top:14px">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgDeadlineEnabled" />
+                <span>⏰ Pengingat tenggat tugas</span>
+              </label>
+            </div>
+            <label style="font-size:12px;font-weight:650;color:var(--ink-soft)">Ingatkan pada:</label>
+            <div class="lead-day-row">
+              <button class="lead-day-chip" type="button" data-lead="3">H-3</button>
+              <button class="lead-day-chip" type="button" data-lead="1">H-1</button>
+              <button class="lead-day-chip" type="button" data-lead="0">Hari H</button>
+            </div>
+            <div class="field-row">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgOverdueEnabled" />
+                <span>🔁 Tetap ingatkan dengan lembut setelah melewati tenggat</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Data</h2></div>
+            <p class="hint-text">Semua data (tugas, daftar pustaka, catatan) disimpan di perangkatmu, bukan di cloud.</p>
+            <button class="btn-ghost btn-danger" id="btnResetData">Hapus semua data</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Dukung Pengembangan</h2></div>
+            <p class="hint-text">Readlify gratis, open source, dan akan tetap gratis. Jika aplikasi ini bermanfaat dan kamu ingin membantu pengembangannya, dukunganmu sangat berarti. Sifatnya sepenuhnya sukarela.</p>
+            <button class="btn-secondary" type="button" data-donate-open>❤️ Dukung lewat SociaBuzz</button>
+            <p class="hint-text" style="margin-top:8px">Akan muncul konfirmasi terlebih dahulu, lalu tautan dibuka di browser bawaanmu, bukan di dalam jendela Readlify.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Legal</h2></div>
+            <p class="hint-text">Syarat dan ketentuan penggunaan aplikasi. Readlify adalah perangkat lunak open source berlisensi MIT.</p>
+            <p class="hint-text" id="termsStatusText" hidden></p>
+            <button class="btn-ghost" id="btnViewTerms" type="button">📄 Baca Syarat &amp; Ketentuan</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ---------- TOAST (pesan pujian, dll) ---------- -->
+  <div class="toast-stack" id="toastStack"></div>
+
+  <!-- ---------- MODAL: tambah/edit tugas ---------- -->
+  <div class="modal-overlay" id="taskModalOverlay">
+    <div class="modal">
+      <h2 id="taskModalTitle">Tugas baru</h2>
+      <div class="field-row">
+        <label>Judul tugas</label>
+        <input type="text" id="taskTitle" placeholder="Contoh: Laporan praktikum Kimia Dasar bab 2" />
+      </div>
+      <div class="field-row two-col">
+        <div>
+          <label>Jenis</label>
+          <select id="taskType">
+            <option value="praktikum">Praktikum</option>
+            <option value="makalah">Makalah</option>
+            <option value="tugas">Tugas biasa</option>
+            <option value="lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div>
+          <label>Mata kuliah</label>
+          <input type="text" id="taskCourse" placeholder="Contoh: Kimia Dasar" />
+        </div>
+      </div>
+      <div class="field-row two-col">
+        <div>
+          <label>Tenggat</label>
+          <input type="date" id="taskDue" />
+        </div>
+        <div>
+          <label>Prioritas</label>
+          <select id="taskPriority">
+            <option value="santai">Santai</option>
+            <option value="normal">Normal</option>
+            <option value="penting">Penting</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label>Langkah-langkah kecil (opsional, tetapi membantu supaya tidak terasa berat)</label>
+        <select id="taskStepTemplate" style="margin-bottom:8px">
+          <option value="">Butuh contoh langkah? (opsional)</option>
+          <option value="praktikum">Contoh langkah: laporan praktikum</option>
+          <option value="makalah">Contoh langkah: makalah</option>
+        </select>
+        <p class="hint-text" style="margin:-2px 0 8px">Tiap langkah boleh dikasih tenggatnya sendiri lewat ikon kalender di sampingnya — sepenuhnya opsional, kosongin aja kalau nggak perlu.</p>
+        <div id="subtaskEditor"></div>
+        <div class="subtask-btn-row">
+          <button class="btn-ghost" id="btnAddSubtask" type="button">+ Tambah langkah</button>
+          <button class="btn-ghost" id="btnBulkSubtask" type="button">Tempel banyak langkah</button>
+        </div>
+        <textarea id="subtaskBulkInput" rows="3" placeholder="Satu langkah per baris, lalu klik &quot;Buat langkah&quot;…" hidden></textarea>
+        <button class="btn-primary" id="btnBulkSubtaskApply" type="button" hidden style="margin-top:8px">Buat langkah</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" id="btnCancelTask">Batal</button>
+        <button class="btn-primary" id="btnSaveTask">Simpan tugas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- MODAL: konfirmasi sebelum ke link donasi ---------- -->
+  <div class="modal-overlay" id="donateModalOverlay">
+    <div class="modal donate-modal">
+      <div class="donate-emoji">❤️</div>
+      <h2>Terima kasih sudah mendukung Readlify!</h2>
+      <p class="hint-text">Readlify gratis, open source, dan akan tetap gratis. Dukungan ini sepenuhnya sukarela, dan tidak ada fitur yang terkunci jika kamu belum berdonasi.</p>
+      <p class="hint-text">Jika melanjutkan, kamu akan dibawa ke <strong>SociaBuzz</strong> (situs pihak ketiga) di browser bawaanmu. Proses pembayaran diurus sepenuhnya oleh mereka.</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="btnDonateCancel" type="button">Nanti saja</button>
+        <a class="btn-primary" id="btnDonateGo" href="https://sociabuzz.com/hasansatriah/tribe" target="_blank" rel="noopener noreferrer">Lanjut ke SociaBuzz →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- MODAL: Syarat & Ketentuan ---------- -->
+  <div class="modal-overlay" id="termsModalOverlay">
+    <div class="modal terms-modal">
+      <h2>Syarat &amp; Ketentuan Penggunaan</h2>
+      <div class="terms-body" id="termsBody">
+        <p><strong>Terakhir diperbarui:</strong> 8 Oktober 2026</p>
+        <p>Readlify (&quot;Aplikasi&quot;) adalah perangkat lunak <strong>open source</strong> berlisensi MIT. Dengan memasang atau memakai Aplikasi, kamu setuju dengan syarat di bawah. Kalau tidak setuju, tidak apa-apa, cukup jangan dipakai ya.</p>
+
+        <h3>1. Lisensi open source (MIT)</h3>
+        <p>Kode sumber Aplikasi dirilis di bawah <strong>Lisensi MIT</strong>. Kamu bebas memakai, menyalin, mengubah, menggabungkan, menerbitkan, membagikan, bahkan menjual salinannya, selama pemberitahuan hak cipta dan teks lisensi MIT tetap disertakan. Teks lengkapnya ada di file <code>LICENSE</code> pada repositori proyek ini.</p>
+
+        <h3>2. Pemakaian</h3>
+        <p>Aplikasi ini gratis dan boleh dipakai di perangkatmu sendiri untuk belajar, produktivitas, atau keperluan lain. Mau bagikan ke teman atau mengembangkannya sendiri? Silakan, sesuai Lisensi MIT. Tolong jangan mengaku sebagai pembuat aslinya.</p>
+
+        <h3>3. Nama dan logo</h3>
+        <p>Kalau kamu membagikan versi modifikasi (fork), mohon pakai nama dan logo yang berbeda supaya pengguna tidak mengira itu Readlify resmi dari pengembang asli.</p>
+
+        <h3>4. Data kamu</h3>
+        <p>Semua yang kamu catat (tugas, daftar pustaka, catatan, nama panggilan, dll.) tersimpan <strong>di perangkatmu sendiri</strong> sebagai file. Aplikasi ini tanpa server, tanpa akun, dan tidak mengirim datamu ke mana pun. Konsekuensinya, kalau file datamu hilang atau rusak, pengembang tidak bisa memulihkannya. Jadi buat cadangan sendiri kalau datanya penting.</p>
+
+        <h3>5. Pustaka pihak ketiga</h3>
+        <p>Aplikasi ini memakai Electron dan pustaka open source lain yang punya lisensi masing-masing. Lisensi tersebut tetap berlaku untuk bagiannya masing-masing, dan informasinya bisa dilihat di paket Electron yang menyertai Aplikasi atau lewat repositori proyek.</p>
+
+        <h3>6. Kontribusi</h3>
+        <p>Kode, perbaikan, atau saran yang kamu kirim ke repositori proyek ini dianggap dirilis di bawah Lisensi MIT yang sama.</p>
+
+        <h3>7. Apa adanya</h3>
+        <p>Aplikasi ini masih <strong>prototipe</strong> dan diberikan apa adanya, tanpa jaminan apa pun, termasuk soal keakuratan atau bebas bug. Dipakai dengan risiko sendiri. Aplikasi ini dibuat dengan bantuan alat AI, lalu ditinjau dan disempurnakan oleh pengembang.</p>
+
+        <h3>8. Batas tanggung jawab</h3>
+        <p>Sejauh diizinkan hukum, pengembang tidak bertanggung jawab atas kerugian apa pun, termasuk data hilang atau tugas telat, yang muncul karena memakai (atau tidak bisa memakai) Aplikasi ini.</p>
+
+        <h3>9. Donasi</h3>
+        <p>Ada tautan donasi sukarela ke <strong>SociaBuzz</strong> (sociabuzz.com/hasansatriah/tribe) yang terbuka di browser, bukan di dalam Aplikasi. SociaBuzz adalah platform pihak ketiga yang di luar kendali pengembang, jadi transaksi dan datamu di sana mengikuti aturan SociaBuzz. Donasi sifatnya sukarela, tidak bisa dikembalikan, tidak membuka fitur tambahan, dan tidak memberi hak khusus seperti dukungan teknis. Tidak berdonasi pun Aplikasi tetap bisa dipakai penuh.</p>
+
+        <h3>10. Perubahan syarat</h3>
+        <p>Syarat ini bisa diperbarui sewaktu-waktu. Kalau ada perubahan penting, kamu mungkin diminta menyetujuinya lagi di versi berikutnya. Versi Aplikasi yang sudah kamu terima tetap tunduk pada Lisensi MIT yang menyertainya.</p>
+
+        <h3>11. Hukum dan kontak</h3>
+        <p>Syarat ini mengikuti hukum Republik Indonesia. Ada pertanyaan atau laporan? Hubungi https://instagram.com/hasansatriah</p>
+      </div>
+
+      <div class="field-row terms-accept-row" id="termsAcceptRow">
+        <label class="switch-row">
+          <input type="checkbox" id="termsAcceptCheckbox" />
+          <span>Saya sudah membaca dan menyetujui Syarat &amp; Ketentuan di atas.</span>
+        </label>
+      </div>
+      <p class="hint-text" id="termsAcceptedInfo" hidden></p>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" id="btnTermsClose" type="button" hidden>Tutup</button>
+        <button class="btn-primary" id="btnTermsAccept" type="button" disabled>Saya Setuju &amp; Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- MODAL: onboarding (isi nama pas pertama kali buka app) ---------- -->
+  <div class="modal-overlay" id="onboardingModalOverlay">
+    <div class="modal onboarding-modal">
+      <img class="onboarding-logo" src="icons/logo.svg" alt="Logo Readlify" />
+      <h2>Selamat datang di Readlify</h2>
+      <p class="hint-text">Sebelum mulai, boleh berkenalan? Nama ini hanya dipakai untuk menyapamu di Beranda dan disimpan di perangkatmu; tidak dikirim ke mana pun.</p>
+      <div class="field-row">
+        <label>Nama panggilan</label>
+        <input type="text" id="onboardingNameInput" maxlength="40" placeholder="Misalnya: Dinda" autocomplete="off" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-primary" id="btnOnboardingSave" type="button">Mulai</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

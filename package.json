@@ -1,0 +1,54 @@
+{
+  "name": "readlify",
+  "version": "1.0.0",
+  "description": "Asisten kuliah anda.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "build": "electron-builder --win"
+  },
+  "author": "@hasansatriah",
+  "license": "MIT",
+  "copyright": "Copyright © 2026 @hasansatriah",
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "electron.app.readlify",
+    "productName": "Readlify",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "build/icon.png"
+    ],
+    "icon": "build/icon.png",
+    "compression": "normal",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "legalTrademarks": "Readlify",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Readlify",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Readlify-Setup-${version}.${ext}"
+    }
+  }
+}
