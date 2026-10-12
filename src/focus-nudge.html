@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+<title>Readlify — Balik fokus</title>
+<style>
+  :root{
+    --cream:#F7F1E7; --ink:#3A3530; --ink-soft:#7A736A; --sage:#7C9473; --sage-dk:#5F7A56;
+  }
+  html,body{ margin:0; padding:0; height:100%; background:transparent; }
+  * { box-sizing:border-box; font-family: -apple-system, "SF Pro Text", ui-rounded, "Segoe UI", Inter, sans-serif; }
+
+  .backdrop{
+    height:100%; width:100%;
+    background: rgba(30,27,23,0.86);
+    backdrop-filter: blur(6px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card{
+    width:min(420px, 86vw);
+    background: var(--cream);
+    border-radius: 24px;
+    padding: 36px 32px 32px;
+    text-align:center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  }
+  .emoji{ font-size:40px; line-height:1; margin-bottom:10px; }
+  h1{ margin:0 0 8px; font-size:20px; color:var(--ink); }
+  p{ margin:0 0 24px; font-size:13.5px; color:var(--ink-soft); line-height:1.5; }
+  button{
+    border:none; cursor:pointer; border-radius:14px; padding:13px 22px;
+    font-size:14.5px; font-weight:650; background:var(--sage); color:white; width:100%;
+  }
+  button:active{ transform: scale(.98); }
+  button:hover{ background: var(--sage-dk); }
+</style>
+</head>
+<body>
+  <div class="backdrop">
+    <div class="card">
+      <div class="emoji">👀</div>
+      <h1>Balik fokus, yuk!</h1>
+      <p>Sesi Mode Fokus kamu masih jalan. Ini cuma reminder di dalam Readlify — nggak ada yang ditutup paksa, tapi mending balik dulu sebelum kebablasan.</p>
+      <button id="btnReturn">Balik ke Readlify</button>
+    </div>
+  </div>
+<script src="focus-nudge-renderer.js"></script>
+</body>
+</html>
