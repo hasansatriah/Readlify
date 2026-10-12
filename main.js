@@ -1,42 +1,15 @@
-const { app, BrowserWindow, ipcMain, screen, Notification, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 const DATA_FILE = path.join(app.getPath('userData'), 'readlify-data.json');
 const APP_ICON = path.join(__dirname, 'build', 'icon.png');
 
-// Without this, Windows has no registered display name to show on the
-// notification toast (especially in dev mode, running unpackaged via
-// `npm start`), so it falls back to showing Electron's own internal
-// default ID literally — that's the "electron.app.Readlify" text seen at
-// the top of the notification. Setting it explicitly makes the toast
-// header just say "Readlify". Must be called before `app.whenReady()` /
-// before any Notification is created.
-if (process.platform === 'win32') {
-  app.setAppUserModelId('Readlify');
-}
-
 let mainWindow = null;
 let miniTimerWindow = null;
-// Last timer tick/state forwarded by the main window. Cached here so that
-// whenever the floating widget window is (re)opened it can be painted with
-// the real, current countdown immediately — otherwise it would sit on the
-// hardcoded "25:00 / Fokus" placeholder baked into mini-timer.html until the
-// next tick or button press in the main window, which read as "the widget
-// doesn't show up / doesn't work" even though the window itself was there.
-let lastTimerState = null;
-
-// Only ever hand off plain http(s) links to the OS browser — blocks
-// javascript:, file:, data: and other schemes that could otherwise be
-// abused to reach local files or run script via a crafted link.
-function isSafeExternalUrl(url) {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' || u.protocol === 'http:';
-  } catch (e) {
-    return false;
-  }
-}
+let nudgeWindow = null;
+let focusGuardActive = false;
+let guardBlurTimer = null;
 
 // ---------- Data persistence (plain JSON file — no DB needed for a prototype) ----------
 function loadData() {
@@ -57,6 +30,71 @@ function saveData(data) {
     return false;
   }
 }
+
+// ---------- Focus Mode "reminder medsos" ----------
+// This used to try to actually enforce blocking at the OS network level,
+// which needed elevated permission and modified a protected system file —
+// a combination that antivirus/SmartScreen reliably treat as malware, even
+// with harmless intent. That approach is gone for good. This is now purely
+// a soft, in-app reminder — nothing here touches anything outside the
+// app's own data file, and nothing requests elevated permission.
+async function setSoftFocusReminder(domains) {
+  return { ok: true, soft: true, domains };
+}
+
+
+// ---------- Buka PDF dari luar (klik dua kali di Explorer / "Buka dengan" Readlify) ----------
+// Installer mendaftarkan Readlify sebagai penampil PDF. File yang dikirim OS lewat argumen
+// baris perintah dibaca di sini lalu dikirim ke renderer; renderer yang membukanya di EdPDF.
+// Cuma file berekstensi .pdf yang diterima, dan Readlify cuma membaca file-nya (nggak mengubah).
+const PDF_RE = /\.pdf$/i;
+let pendingPdfPaths = [];
+let rendererReady = false;
+
+function pdfPathsFromArgv(argv, cwd) {
+  return (argv || [])
+    .filter((a) => typeof a === 'string' && !a.startsWith('-') && PDF_RE.test(a))
+    .map((a) => path.resolve(cwd || process.cwd(), a))
+    .filter((p) => { try { return fs.statSync(p).isFile(); } catch (e) { return false; } });
+}
+async function deliverPdfs(paths) {
+  const files = [];
+  for (const p of paths) {
+    try { files.push({ name: path.basename(p), data: await fs.promises.readFile(p) }); } catch (e) { /* file hilang/terkunci: lewati */ }
+  }
+  if (files.length && mainWindow) mainWindow.webContents.send('edpdf:open-files', files);
+}
+function flushPdfs() {
+  if (!rendererReady || !mainWindow || !pendingPdfPaths.length) return;
+  const list = pendingPdfPaths;
+  pendingPdfPaths = [];
+  deliverPdfs(list);
+}
+function queuePdfs(paths) {
+  if (!paths.length) return;
+  pendingPdfPaths.push(...paths);
+  flushPdfs();
+}
+
+// Satu jendela Readlify aja: buka file PDF lagi = nambah tab di jendela yang udah ada.
+const gotInstanceLock = app.requestSingleInstanceLock();
+if (!gotInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_evt, argv, cwd) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    queuePdfs(pdfPathsFromArgv(argv.slice(1), cwd));
+  });
+  queuePdfs(pdfPathsFromArgv(process.argv.slice(app.isPackaged ? 1 : 2), process.cwd()));
+}
+app.on('open-file', (evt, p) => { // macOS
+  evt.preventDefault();
+  if (PDF_RE.test(p)) queuePdfs([p]);
+});
 
 // ---------- Windows ----------
 function createMainWindow() {
@@ -89,40 +127,73 @@ function createMainWindow() {
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
-  // Any link that tries to open a new window (target="_blank", window.open,
-  // dsb.) gets handed off to the OS default browser instead of spawning a
-  // second Electron window — dipakai buat tombol donasi & link eksternal
-  // lainnya.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isSafeExternalUrl(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
-  // Extra safety net: kalau ada yang nyoba nge-navigate window utama itu
-  // sendiri ke URL luar (klik link biasa yang lolos, dsb.), batalin
-  // navigasinya dan lempar ke browser default aja, bukan dimuat di dalam app.
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) {
-      event.preventDefault();
-      if (isSafeExternalUrl(url)) shell.openExternal(url);
-    }
-  });
-
+  mainWindow.webContents.on('did-start-loading', () => { rendererReady = false; });
   mainWindow.on('closed', () => {
+    rendererReady = false;
     mainWindow = null;
     if (miniTimerWindow) { miniTimerWindow.close(); miniTimerWindow = null; }
+    clearTimeout(guardBlurTimer);
+    hideNudgeWindow();
+  });
+
+  // ---------- "Balik fokus" nudge (safe stand-in for cross-app blocking) ----------
+  // The renderer tells us (via focus-guard:set) whenever an active work
+  // session with the reminder toggle on is actually counting down. While
+  // that's true, switching away from Readlify for more than a few seconds
+  // brings up a full-screen "balik fokus" card with one button. This only
+  // ever looks at THIS app's own window-focus events — it never inspects,
+  // lists, or touches any other program, so there's nothing here that
+  // resembles process/window surveillance.
+  mainWindow.on('blur', () => {
+    if (!focusGuardActive) return;
+    clearTimeout(guardBlurTimer);
+    guardBlurTimer = setTimeout(() => {
+      if (focusGuardActive) createNudgeWindow();
+    }, 4000);
+  });
+  mainWindow.on('focus', () => {
+    clearTimeout(guardBlurTimer);
+    hideNudgeWindow();
   });
 }
 
+function createNudgeWindow() {
+  if (nudgeWindow) { nudgeWindow.show(); return; }
+  const display = screen.getPrimaryDisplay();
+  const { width, height } = display.workAreaSize;
+
+  nudgeWindow = new BrowserWindow({
+    width, height, x: 0, y: 0,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    icon: APP_ICON,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+    },
+  });
+  nudgeWindow.setAlwaysOnTop(true, 'screen-saver');
+  nudgeWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  nudgeWindow.loadFile(path.join(__dirname, 'src', 'focus-nudge.html'));
+
+  nudgeWindow.on('closed', () => { nudgeWindow = null; });
+}
+
+function hideNudgeWindow() {
+  if (nudgeWindow) { nudgeWindow.close(); nudgeWindow = null; }
+}
+
 function createMiniTimerWindow() {
-  if (miniTimerWindow) {
-    // It can already exist but be minimized/hidden behind other windows —
-    // .focus() alone doesn't un-minimize or re-map a hidden window on every
-    // platform, so explicitly restore + show first.
-    if (miniTimerWindow.isMinimized()) miniTimerWindow.restore();
-    miniTimerWindow.show();
-    miniTimerWindow.focus();
-    return;
-  }
+  if (miniTimerWindow) { miniTimerWindow.focus(); return; }
   const display = screen.getPrimaryDisplay();
   const { width } = display.workAreaSize;
 
@@ -138,13 +209,7 @@ function createMiniTimerWindow() {
     alwaysOnTop: true,
     frame: false,
     transparent: true,
-    // Fully-transparent 32-bit background. Leaving this unset can make a
-    // transparent+frameless window fail to composite correctly on some
-    // Windows setups (GPU/driver dependent) and render as blank/invisible
-    // instead of showing the card — explicit ARGB avoids that.
-    backgroundColor: '#00000000',
     hasShadow: true,
-    show: false, // paint fully (and apply always-on-top) before showing
     icon: APP_ICON,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -165,18 +230,6 @@ function createMiniTimerWindow() {
   miniTimerWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   miniTimerWindow.loadFile(path.join(__dirname, 'src', 'mini-timer.html'));
 
-  miniTimerWindow.once('ready-to-show', () => {
-    // Re-assert after the OS has actually mapped the window — on Windows the
-    // always-on-top flag is occasionally dropped by the window manager if
-    // it's set only before the first paint.
-    miniTimerWindow.setAlwaysOnTop(true, 'screen-saver');
-    miniTimerWindow.show();
-  });
-
-  miniTimerWindow.webContents.once('did-finish-load', () => {
-    if (lastTimerState) miniTimerWindow.webContents.send('timer:state', lastTimerState);
-  });
-
   miniTimerWindow.on('closed', () => {
     miniTimerWindow = null;
     if (mainWindow) mainWindow.webContents.send('mini-timer-closed');
@@ -190,11 +243,8 @@ ipcMain.handle('data:save', (_evt, data) => saveData(data));
 ipcMain.on('mini-timer:open', () => createMiniTimerWindow());
 ipcMain.on('mini-timer:close', () => { if (miniTimerWindow) miniTimerWindow.close(); });
 
-// Main window -> mini window: forward every tick/state update, and cache it
-// so a freshly (re)opened widget window can be painted with the real state
-// right away instead of a stale placeholder.
+// Main window -> mini window: forward every tick/state update
 ipcMain.on('timer:state', (_evt, state) => {
-  lastTimerState = state;
   if (miniTimerWindow) miniTimerWindow.webContents.send('timer:state', state);
 });
 
@@ -203,46 +253,42 @@ ipcMain.on('timer:control', (_evt, action) => {
   if (mainWindow) mainWindow.webContents.send('timer:control', action);
 });
 
-// ---------- Native notifications (pengingat jam belajar & deadline) ----------
-// The renderer decides WHEN and WHAT to say (it's the one holding the
-// task/reminder state) but the actual popup is created here with Electron's
-// own Notification, not the browser's. That way it looks/behaves like a
-// real OS notification (Action Center / Notification Center / libnotify),
-// still shows up even when Readlify isn't the focused window, and doesn't
-// need a permission prompt the way the web Notification API would inside a
-// renderer.
-ipcMain.on('notify:show', (_evt, payload = {}) => {
-  if (!Notification.isSupported()) return;
-  const n = new Notification({
-    title: payload.title || 'Readlify',
-    body: payload.body || '',
-    icon: APP_ICON,
-    // The Pomodoro chime (or any in-app toast) already covers sound for
-    // things happening while the app is open; a second OS ping on top of
-    // that would double up and feel jarring — especially for the exact
-    // audience (ADHD-friendly reminders) these notifications are for.
-    silent: true,
-  });
-  n.on('click', () => {
-    if (!mainWindow) return;
+ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.on('edpdf:ready', () => { rendererReady = true; flushPdfs(); });
+// Cetak: tampilkan dialog cetak sistem (pilih printer / "Microsoft Print to PDF", jumlah salinan, dll).
+ipcMain.handle('edpdf:print', (evt, opts) => new Promise((resolve) => {
+  evt.sender.print(
+    { silent: false, printBackground: true, landscape: !!(opts && opts.landscape) },
+    (success, reason) => resolve({ ok: !!success, reason: reason || '' })
+  );
+}));
+// Windows nggak ngizinin aplikasi mengganti default sendiri; buka halamannya biar user yang milih.
+ipcMain.handle('app:open-default-apps', async () => {
+  if (process.platform !== 'win32') return false;
+  try { await shell.openExternal('ms-settings:defaultapps'); return true; } catch (e) { return false; }
+});
+ipcMain.handle('focus:block', (_evt, domains) => setSoftFocusReminder(domains || []));
+ipcMain.handle('focus:unblock', () => setSoftFocusReminder([]));
+
+ipcMain.on('focus-guard:set', (_evt, active) => {
+  focusGuardActive = !!active;
+  if (!focusGuardActive) {
+    clearTimeout(guardBlurTimer);
+    hideNudgeWindow();
+  }
+});
+
+ipcMain.on('focus-guard:return', () => {
+  hideNudgeWindow();
+  if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
-    if (payload.goto) mainWindow.webContents.send('notify:clicked', payload.goto);
-  });
-  n.show();
+  }
 });
 
 app.whenReady().then(() => {
-  // Readlify tidak boleh membuka dirinya sendiri saat PC baru menyala.
-  // Aplikasi ini tidak pernah mendaftarkan diri sebagai program startup;
-  // baris ini juga membersihkan entri startup lama (misalnya dari versi
-  // sebelumnya) yang pernah terdaftar lewat API Electron. Hanya berlaku
-  // di build hasil install, bukan saat `npm start`.
-  if (app.isPackaged) {
-    try { app.setLoginItemSettings({ openAtLogin: false }); } catch (_) { /* abaikan */ }
-  }
-
+  if (!gotInstanceLock) return;
   if (process.platform === 'darwin' && app.dock) {
     app.dock.setIcon(APP_ICON); // dev-mode dock icon; packaged builds use build/icon.png via electron-builder
   }
