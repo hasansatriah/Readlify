@@ -1,23 +1,15 @@
 (() => {
   'use strict';
 
-  // Versi teks Syarat & Ketentuan yang sedang berlaku (tanggal pembaruan).
-  // Dicatat bersama waktu persetujuan di file data lokal.
-  const TERMS_VERSION = '2026-10-08';
-
   // ============================================================
   // STATE
   // ============================================================
   const DEFAULT_STATE = () => ({
-    userName: '',
-    termsAccepted: false,
-    termsAcceptedAt: '',   // ISO timestamp persetujuan terakhir
-    termsVersion: '',      // versi S&K yang terakhir disetujui
-    termsHistory: [],      // riwayat: [{ version, acceptedAt }]
     theme: 'cozy-light',
     soundEnabled: true,
     tasks: [],
     citations: [],
+    citationStyle: 'apa7',
     notes: [],
     mood: { date: '', value: '' },
     pomodoro: {
@@ -25,35 +17,14 @@
       sessionsToday: [], // {taskId, seconds, completedAt}
       streakDays: 0,
       lastActiveDate: '',
-      // "Toleransi deret harian": tiap 1 minggu dapet jatah 2 hari bolong
-      // yang gak bikin deret balik ke nol. Gak akumulasi antar minggu —
-      // jatahnya di-refill ke 2 (bukan ditambah), jadi maksimal 2 kapan pun.
-      streakToleranceLeft: 2,
-      streakToleranceAnchor: '', // tanggal mulai jendela 7-harian saat ini
-      soundVolume: 0.6,          // 0..1 — scales the chime's gain
-      soundPreset: 'ting-lembut', // key into SOUND_PRESETS
     },
-    // Pengingat jam belajar & deadline — dibikin buat ramah otak ADHD:
-    // tiap slot cuma nembak sekali (dicatat di reminderLog), dan
-    // kalimatnya dirandom dari beberapa variasi biar gak gampang jadi
-    // "wallpaper" yang otomatis di-skip begitu udah hafal bunyinya.
-    reminders: {
-      studyEnabled: false,
-      studyTimes: [],              // ["HH:MM", ...]
-      idleNudgeEnabled: true,
-      idleNudgeMinutes: 45,
-      deadlineEnabled: true,
-      deadlineLeadDays: [3, 1, 0], // H- berapa hari sebelum deadline
-      overdueEnabled: true,
+    focusSettings: {
+      blockEnabled: false,
+      blockMode: 'preset', // 'preset' | 'custom'
+      customSites: [],     // array of SOCIAL_SITES ids
+      locked: false,       // "kunci pengaturan selagi Mode Fokus aktif"
     },
-    reminderLog: {
-      date: '',
-      studyFiredTimes: [],   // ["HH:MM", ...] yang udah nembak hari ini
-      idleLastFireAt: 0,
-      deadlineFired: [],     // ["<taskId>:<leadDay>", ...]
-      overdueFired: [],      // ["<taskId>:<YYYY-MM-DD>", ...]
-    },
-    brainDump: '',
+    focusScratch: '',
   });
 
   let state = DEFAULT_STATE();
@@ -101,21 +72,9 @@
     if (loaded) {
       state = Object.assign(DEFAULT_STATE(), loaded, {
         pomodoro: Object.assign(DEFAULT_STATE().pomodoro, loaded.pomodoro || {}),
-        reminders: Object.assign(DEFAULT_STATE().reminders, loaded.reminders || {}),
-        reminderLog: Object.assign(DEFAULT_STATE().reminderLog, loaded.reminderLog || {}),
+        focusSettings: Object.assign(DEFAULT_STATE().focusSettings, loaded.focusSettings || {}),
       });
-      // Pengguna lama yang dulu sudah menyetujui versi "EULA" tidak perlu
-      // disuruh setuju ulang karena namanya diganti jadi Syarat & Ketentuan.
-      if (loaded.termsAccepted === undefined && loaded.eulaAccepted) {
-        state.termsAccepted = true;
-        state.termsVersion = 'EULA-lama';
-        state.termsHistory = [{ version: 'EULA-lama', acceptedAt: '' }];
-      }
       migrateOldPomodoroShape(loaded);
-      migrateOldCicilanIntoTasks(loaded);
-      // Nama field lama dari saat fitur ini masih bagian dari "Mode Fokus"
-      // yang sekarang udah dilebur ke kartu Pomodoro.
-      if (!loaded.brainDump && loaded.focusScratch) state.brainDump = loaded.focusScratch;
     }
 
     rolloverDailyThings();
@@ -124,153 +83,13 @@
     initHome();
     initTasks();
     initPomodoro();
-    initDonate();
     initCitations();
+    initEdPdf();
+    initFocus();
     initNotes();
     initSettings();
-    initSoundSettings();
-    initReminders();
 
     renderAll();
-    initTermsModal();
-    runStartupGates();
-  }
-
-  // ============================================================
-  // Syarat & Ketentuan — wajib disetujui sebelum bisa lanjut, dan
-  // bisa dibaca ulang kapan aja lewat Pengaturan → Legal.
-  // ============================================================
-  function initTermsModal() {
-    const modal = document.getElementById('termsModalOverlay');
-    const checkbox = document.getElementById('termsAcceptCheckbox');
-    const acceptBtn = document.getElementById('btnTermsAccept');
-    const closeBtn = document.getElementById('btnTermsClose');
-    if (!modal || !checkbox || !acceptBtn || !closeBtn) return;
-
-    renderTermsStatus();
-
-    checkbox.addEventListener('change', () => {
-      acceptBtn.disabled = !checkbox.checked;
-    });
-
-    acceptBtn.addEventListener('click', () => {
-      if (!checkbox.checked) return;
-      const now = new Date().toISOString();
-      state.termsAccepted = true;
-      state.termsAcceptedAt = now;
-      state.termsVersion = TERMS_VERSION;
-      if (!Array.isArray(state.termsHistory)) state.termsHistory = [];
-      state.termsHistory.push({ version: TERMS_VERSION, acceptedAt: now });
-      // Catatan persetujuan langsung ditulis ke file lokal, tanpa menunggu
-      // jeda penyimpanan biasa, supaya tidak hilang kalau app ditutup cepat.
-      clearTimeout(saveTimer);
-      window.api.saveData(state);
-      renderTermsStatus();
-      modal.classList.remove('is-open');
-      runStartupGates();
-    });
-
-    closeBtn.addEventListener('click', () => {
-      modal.classList.remove('is-open');
-    });
-
-    document.getElementById('btnViewTerms').addEventListener('click', () => {
-      // Dibuka dari Pengaturan: mode "baca aja", checkbox & tombol setuju
-      // gak wajib dipencet lagi karena Syarat & Ketentuannya udah pernah disetujui.
-      openTermsModal({ requireAccept: false });
-    });
-  }
-
-  function openTermsModal({ requireAccept }) {
-    const modal = document.getElementById('termsModalOverlay');
-    const acceptRow = document.getElementById('termsAcceptRow');
-    const acceptBtn = document.getElementById('btnTermsAccept');
-    const closeBtn = document.getElementById('btnTermsClose');
-    const checkbox = document.getElementById('termsAcceptCheckbox');
-    const body = document.getElementById('termsBody');
-
-    const info = document.getElementById('termsAcceptedInfo');
-
-    // Mode wajib setuju: checkbox kosong dan bisa dicentang.
-    // Mode baca ulang (dari Pengaturan): checkbox tetap tercentang (terkunci)
-    // beserta keterangan kapan disetujui, diambil dari file data lokal.
-    acceptRow.hidden = false;
-    acceptBtn.hidden = !requireAccept;
-    closeBtn.hidden = requireAccept;
-    checkbox.checked = !requireAccept && !!state.termsAccepted;
-    checkbox.disabled = !requireAccept;
-    acceptBtn.disabled = requireAccept;
-    if (info) {
-      info.textContent = termsAcceptedLabel();
-      info.hidden = requireAccept || !state.termsAccepted;
-    }
-    body.scrollTop = 0;
-    modal.classList.add('is-open');
-  }
-
-  // Teks keterangan persetujuan, mis. "Disetujui pada 8 Oktober 2026 14.05".
-  function termsAcceptedLabel() {
-    if (!state.termsAccepted) return '';
-    if (!state.termsAcceptedAt) return 'Disetujui (tanggal tidak tercatat).';
-    const d = new Date(state.termsAcceptedAt);
-    if (isNaN(d)) return 'Disetujui.';
-    const when = d.toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
-    return `Disetujui pada ${when}.`;
-  }
-
-  // Tampilkan status persetujuan di kartu Legal (Pengaturan).
-  function renderTermsStatus() {
-    const el = document.getElementById('termsStatusText');
-    if (!el) return;
-    el.textContent = state.termsAccepted ? `✅ ${termsAcceptedLabel()}` : '';
-    el.hidden = !state.termsAccepted;
-  }
-
-  // Jalanin gate onboarding secara berurutan: Syarat & Ketentuan dulu (kalau belum pernah
-  // disetujui), baru nama panggilan (kalau belum pernah diisi). Dipanggil
-  // ulang tiap satu gate kelar, biar gate berikutnya otomatis nyusul.
-  function runStartupGates() {
-    if (!state.termsAccepted) {
-      openTermsModal({ requireAccept: true });
-      return;
-    }
-    initOnboarding();
-  }
-
-  // ============================================================
-  // ONBOARDING (tanya nama pas pertama kali buka aplikasi)
-  // ============================================================
-  function initOnboarding() {
-    if (state.userName && state.userName.trim()) return; // udah pernah isi nama
-
-    const modal = document.getElementById('onboardingModalOverlay');
-    const input = document.getElementById('onboardingNameInput');
-    const btn = document.getElementById('btnOnboardingSave');
-    if (!modal || !input || !btn) return;
-
-    modal.classList.add('is-open');
-    setTimeout(() => input.focus(), 50);
-
-    const save = () => {
-      const name = input.value.trim();
-      if (!name) {
-        input.focus();
-        input.classList.add('input-error');
-        return;
-      }
-      state.userName = name;
-      persist();
-      modal.classList.remove('is-open');
-      initHome();
-      renderHome();
-      syncProfileNameInput();
-    };
-
-    btn.addEventListener('click', save);
-    input.addEventListener('keydown', (e) => {
-      input.classList.remove('input-error');
-      if (e.key === 'Enter') save();
-    });
   }
 
   // Older saved data stored whole minutes as `work`/`short`/`long`. Convert
@@ -286,83 +105,16 @@
     );
   }
 
-  // "Cicil Duluan" dulu halaman terpisah buat nyicil tugas yang belum
-  // resmi ditugaskan. Sekarang itu cukup dibuat lewat Tugas biasa (tenggat
-  // boleh dikosongin kalau belum pasti) — satu fitur aja, gak dobel. Kalau
-  // ada data cicilan lama, pindahin otomatis jadi Tugas sekali jalan biar
-  // progres yang udah dikerjain gak hilang.
-  function migrateOldCicilanIntoTasks(loaded) {
-    const old = loaded.cicilan;
-    if (Array.isArray(old) && old.length) {
-      old.forEach(p => {
-        state.tasks.push({
-          id: p.id || uid(),
-          status: (p.steps || []).some(s => s.done) ? 'berjalan' : 'belum',
-          createdAt: p.createdAt || Date.now(),
-          title: p.title || 'Tugas tanpa judul',
-          type: p.type || 'lainnya',
-          course: '',
-          due: p.target || '',
-          priority: 'normal',
-          subtasks: (p.steps || []).map(s => ({ id: s.id || uid(), text: s.text, done: !!s.done })),
-        });
-      });
-    }
-    delete state.cicilan;
-  }
-
-  // Selisih hari kalender antara dua tanggal 'YYYY-MM-DD' (b - a).
-  function daysBetween(a, b) {
-    return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
-  }
-
   function rolloverDailyThings() {
     const today = todayStr();
     const p = state.pomodoro;
-
-    // --- Toleransi deret harian: tiap 7 hari di-refill balik ke 2, gak
-    // numpuk/akumulasi — jadi jatahnya selalu maksimal 2 kapan pun dicek. ---
-    if (!p.streakToleranceAnchor) {
-      p.streakToleranceAnchor = today; // titik mulai jendela 7-harian pertama
-    } else if (daysBetween(p.streakToleranceAnchor, today) >= 7) {
-      p.streakToleranceLeft = 2;
-      p.streakToleranceAnchor = today;
-    }
-
     if (p.lastActiveDate && p.lastActiveDate !== today) {
-      const gap = daysBetween(p.lastActiveDate, today);
-      // Hari yang pasti bolong total (app gak dibuka sama sekali di
-      // antaranya), ditambah hari terakhir kalau ternyata gak ada sesi
-      // yang kelar di hari itu juga.
-      let missedDays = Math.max(0, gap - 1);
-      if (p.sessionsToday.length === 0) missedDays += 1;
-
-      if (missedDays > 0) {
-        if (p.streakToleranceLeft >= missedDays) {
-          // Toleransi nutupin hari yang bolong — deret tetep sama, gak
-          // balik ke nol.
-          p.streakToleranceLeft -= missedDays;
-        } else {
-          p.streakDays = 0;
-        }
-      }
+      const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      p.streakDays = (p.lastActiveDate === y && p.sessionsToday.length > 0) ? p.streakDays : 0;
       p.sessionsToday = [];
     }
     if (state.mood.date !== today) state.mood = { date: today, value: '' };
     p.lastActiveDate = today;
-
-    // Reminder log resets daily so jam-belajar reminders can fire again on
-    // a fresh day. Also piggyback here to forget deadline/overdue entries
-    // for tasks that got deleted or finished, so the log doesn't grow
-    // forever.
-    const rl = state.reminderLog;
-    if (rl.date !== today) {
-      rl.date = today;
-      rl.studyFiredTimes = [];
-    }
-    const liveTaskIds = new Set(state.tasks.map(x => x.id));
-    rl.deadlineFired = (rl.deadlineFired || []).filter(k => liveTaskIds.has(k.split(':')[0]));
-    rl.overdueFired = (rl.overdueFired || []).filter(k => liveTaskIds.has(k.split(':')[0]));
   }
 
   function renderAll() {
@@ -370,7 +122,9 @@
     renderTasks();
     renderPomodoroPanel();
     renderCitations();
+    renderFocusTaskOptions();
     renderNotes();
+    applyFocusLockUI();
   }
 
   // ============================================================
@@ -404,20 +158,17 @@
 
     const hour = new Date().getHours();
     const greetWord = hour < 11 ? 'Pagi' : hour < 15 ? 'Siang' : hour < 18 ? 'Sore' : 'Malam';
-    const name = (state.userName || '').trim();
-    document.getElementById('greeting').textContent = name
-      ? `Selamat ${greetWord.toLowerCase()}, ${name}!`
-      : `Selamat ${greetWord.toLowerCase()}!`;
+    document.getElementById('greeting').textContent = `Met ${greetWord.toLowerCase()}, Hasan! ✨`;
     document.getElementById('todayLine').textContent = new Date().toLocaleDateString('id-ID', {
       weekday: 'long', day: 'numeric', month: 'long',
     });
   }
 
   const MOOD_NOTES = {
-    lelah: 'Pelan-pelan saja. Kamu tidak harus menyelesaikan semuanya hari ini; satu langkah kecil sudah cukup.',
-    biasa: 'Tidak apa-apa. Melangkah pelan-pelan tetap akan sampai.',
-    semangat: 'Momen yang pas untuk memulai sesi fokus. Manfaatkan semangatmu.',
-    cemas: 'Tarik napas dulu. Coba satu sesi Pomodoro singkat untuk membantu meredakan pikiran yang ramai.',
+    lelah: 'Chill dulu, gak harus rampung semua hari ini. Satu langkah kecil aja udah menang.',
+    biasa: 'Nice, tetep gas pelan-pelan juga sampai kok.',
+    semangat: 'Gaskeun! Ini momen yang pas buat mulai sesi fokus, jangan disia-siain.',
+    cemas: 'Tarik napas dulu bestie. Coba Mode Fokus biar distraksi pada minggir.',
   };
 
   function renderHome() {
@@ -430,9 +181,6 @@
     const totalSec = sessions.reduce((a, s) => a + (s.seconds || 0), 0);
     document.getElementById('statMinutesToday').textContent = `${Math.round(totalSec / 60)} menit`;
     document.getElementById('statStreak').textContent = state.pomodoro.streakDays;
-    const tol = state.pomodoro.streakToleranceLeft;
-    document.getElementById('statStreakFoot').textContent =
-      `hari berturut-turut · 🛡️ ${tol} streak`;
 
     const list = document.getElementById('homeTaskList');
     const sorted = [...active].sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999')).slice(0, 5);
@@ -459,32 +207,6 @@
 
   const TASK_TYPE_LABEL = { praktikum: 'Praktikum', makalah: 'Makalah', tugas: 'Tugas biasa', lainnya: 'Lainnya' };
 
-  // Contoh langkah siap pakai (opsional) di formulir tugas — dulu ini isi
-  // fitur "Cicil Duluan" yang terpisah, sekarang jadi bagian dari Tugas aja
-  // supaya kerja mecah-tugas-jadi-langkah-kecil gak perlu dua tempat beda.
-  const TASK_STEP_TEMPLATES = {
-    praktikum: [
-      'Baca ulang modul atau petunjuk praktikum',
-      'Tulis tujuan dan latar belakang singkat',
-      'Kumpulkan 3 referensi (jurnal atau buku) untuk landasan teori',
-      'Tulis landasan teori',
-      'Rapikan alat, bahan, dan prosedur kerja',
-      'Siapkan tabel kosong untuk data hasil',
-      'Tulis kerangka pembahasan (poin-poinnya dulu)',
-      'Rapikan format dan daftar pustaka',
-    ],
-    makalah: [
-      'Tentukan topik dan rumusan masalah',
-      'Cari 5 sumber referensi',
-      'Susun kerangka (judul bab dan poin-poinnya)',
-      'Tulis pendahuluan',
-      'Tulis isi bagian 1',
-      'Tulis isi bagian 2',
-      'Tulis kesimpulan',
-      'Rapikan format dan daftar pustaka',
-    ],
-  };
-
   function initTasks() {
     document.querySelectorAll('.chip[data-filter]').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -503,17 +225,6 @@
     document.getElementById('btnCancelTask').addEventListener('click', closeTaskModal);
     document.getElementById('btnSaveTask').addEventListener('click', saveTaskFromModal);
     document.getElementById('btnAddSubtask').addEventListener('click', () => addSubtaskRow(''));
-    document.getElementById('taskStepTemplate').addEventListener('change', (e) => {
-      const steps = TASK_STEP_TEMPLATES[e.target.value];
-      e.target.value = ''; // reset biar bisa dipilih ulang kapan aja
-      if (!steps) return;
-      // Baris kosong yang masih kosong (misal baris awal bawaan modal)
-      // dibuang dulu biar contoh langkahnya gak nyampur sama baris kosong.
-      document.querySelectorAll('#subtaskEditor .subtask-row').forEach(row => {
-        if (!row.querySelector('.subtask-text').value.trim()) row.remove();
-      });
-      steps.forEach(text => addSubtaskRow(text));
-    });
     document.getElementById('taskModalOverlay').addEventListener('click', (e) => {
       if (e.target.id === 'taskModalOverlay') closeTaskModal();
     });
@@ -550,7 +261,7 @@
     subtaskDraft = task ? task.subtasks.map(s => ({ ...s })) : [];
     const editor = document.getElementById('subtaskEditor');
     editor.innerHTML = '';
-    subtaskDraft.forEach((s) => addSubtaskRow(s.text, s.due));
+    subtaskDraft.forEach((s) => addSubtaskRow(s.text));
     if (subtaskDraft.length === 0) addSubtaskRow('');
 
     const bulkInput = document.getElementById('subtaskBulkInput');
@@ -573,17 +284,13 @@
   // insertAfterRow: when given, the new row lands right below it (so hitting
   // Enter mid-list drops the next step where you're looking, not at the
   // bottom). Omit it to just append — used for initial population/bulk-paste.
-  // due (opsional): tanggal "YYYY-MM-DD" tenggat khusus langkah ini, kalau
-  // pengguna mau. Kosong = gak ada tenggat, dan itu wajar — bukan tiap
-  // langkah kecil butuh deadline sendiri.
-  function addSubtaskRow(text, due, insertAfterRow) {
+  function addSubtaskRow(text, insertAfterRow) {
     const editor = document.getElementById('subtaskEditor');
     const row = document.createElement('div');
     row.className = 'subtask-row';
-    row.innerHTML = `<input type="text" class="subtask-text" value="${escapeHtml(text)}" placeholder="Langkah kecil…" />
-                      <input type="date" class="subtask-due" value="${due || ''}" title="Tenggat langkah ini (opsional)" />
-                      <button type="button" title="Hapus langkah">✕</button>`;
-    const input = row.querySelector('.subtask-text');
+    row.innerHTML = `<input type="text" value="${escapeHtml(text)}" placeholder="Langkah kecil…" />
+                      <button type="button" title="Hapus">✕</button>`;
+    const input = row.querySelector('input');
     row.querySelector('button').addEventListener('click', () => row.remove());
 
     // Enter = "tambahin langkah baru", biar nggak perlu bolak-balik klik
@@ -591,8 +298,8 @@
     input.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      const newRow = addSubtaskRow('', '', row);
-      newRow.querySelector('.subtask-text').focus();
+      const newRow = addSubtaskRow('', row);
+      newRow.querySelector('input').focus();
     });
 
     if (insertAfterRow && insertAfterRow.parentElement === editor) {
@@ -612,19 +319,15 @@
     const title = document.getElementById('taskTitle').value.trim();
     if (!title) { document.getElementById('taskTitle').focus(); return; }
 
-    const subtaskRows = [...document.querySelectorAll('#subtaskEditor .subtask-row')]
-      .map(row => ({
-        text: row.querySelector('.subtask-text').value.trim(),
-        due: row.querySelector('.subtask-due').value || '',
-      }))
-      .filter(r => r.text);
+    const subtasksText = [...document.querySelectorAll('#subtaskEditor input')]
+      .map(i => i.value.trim()).filter(Boolean);
 
     const existing = editingTaskId ? state.tasks.find(t => t.id === editingTaskId) : null;
     const prevSubtasks = existing ? existing.subtasks : [];
 
-    const subtasks = subtaskRows.map(r => {
-      const match = prevSubtasks.find(s => s.text === r.text);
-      return { id: match ? match.id : uid(), text: r.text, done: match ? match.done : false, due: r.due };
+    const subtasks = subtasksText.map(text => {
+      const match = prevSubtasks.find(s => s.text === text);
+      return { id: match ? match.id : uid(), text, done: match ? match.done : false };
     });
 
     const payload = {
@@ -645,7 +348,7 @@
     }
     persist();
     closeTaskModal();
-    renderTasks(); renderHome(); renderPomodoroLinkedOptions();
+    renderTasks(); renderHome(); renderFocusTaskOptions(); renderPomodoroLinkedOptions();
   }
 
   function renderTasks() {
@@ -653,8 +356,8 @@
     board.innerHTML = '';
     const cols = [
       { key: 'belum', label: 'Belum dikerjakan' },
-      { key: 'berjalan', label: 'Sedang dikerjakan' },
-      { key: 'selesai', label: 'Selesai' },
+      { key: 'berjalan', label: 'Sedang jalan' },
+      { key: 'selesai', label: 'Kelar' },
     ];
     cols.forEach(col => {
       if (col.key === 'selesai' && !showDone) return;
@@ -690,7 +393,7 @@
       ${total ? `
       <button class="subtask-toggle" data-act="toggle-subtasks" type="button">
         <span class="subtask-caret">${isOpen ? '▾' : '▸'}</span>
-        <span class="subtask-progress">${done}/${total} langkah selesai</span>
+        <span class="subtask-progress">${done}/${total} langkah kelar</span>
       </button>
       <div class="subtask-mini-bar"><div class="subtask-mini-fill" style="width:${Math.round((done/total)*100)}%"></div></div>
       <ul class="subtask-checklist" ${isOpen ? '' : 'hidden'}>
@@ -699,13 +402,12 @@
             <label>
               <input type="checkbox" data-subtask-id="${s.id}" ${s.done ? 'checked' : ''} />
               <span>${escapeHtml(s.text)}</span>
-              ${s.due ? `<span class="due">🗓 ${fmtDue(s.due)}</span>` : ''}
             </label>
           </li>`).join('')}
       </ul>` : ''}
       <div class="task-actions">
-        ${t.status === 'belum' ? '<button class="btn-ghost" data-act="mulai">Mulai</button>' : ''}
-        ${t.status === 'berjalan' ? '<button class="btn-ghost" data-act="fokus">Fokus</button>' : ''}
+        ${t.status === 'belum' ? '<button class="btn-ghost" data-act="mulai">Gas</button>' : ''}
+        ${t.status === 'berjalan' ? '<button class="btn-ghost" data-act="fokus">Fokusin</button>' : ''}
         ${t.status !== 'selesai' ? '<button class="btn-ghost" data-act="pecah">Pecah</button>' : ''}
         <button class="btn-ghost" data-act="edit">Edit</button>
         <button class="btn-ghost" data-act="hapus">Hapus</button>
@@ -713,12 +415,8 @@
     `;
 
     card.querySelector('.task-check').addEventListener('click', () => {
-      const justCompleted = t.status !== 'selesai';
       t.status = t.status === 'selesai' ? 'berjalan' : 'selesai';
       persist(); renderTasks(); renderHome();
-      // Cuma pas beneran baru diselesain (bukan pas di-uncheck lagi) yang
-      // dapet pesan pujian.
-      if (justCompleted && t.status === 'selesai') showPraiseToast(t);
     });
     card.querySelectorAll('[data-act]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -726,12 +424,8 @@
         if (act === 'mulai') { t.status = 'berjalan'; persist(); renderTasks(); }
         if (act === 'edit') openTaskModal(t);
         if (act === 'pecah') openTaskModal(t, true);
-        if (act === 'hapus') { state.tasks = state.tasks.filter(x => x.id !== t.id); persist(); renderTasks(); renderHome(); renderPomodoroLinkedOptions(); }
-        if (act === 'fokus') {
-          goToView('pomodoro');
-          timer.linkedTaskId = t.id;
-          document.getElementById('cfgLinkedTask').value = t.id;
-        }
+        if (act === 'hapus') { state.tasks = state.tasks.filter(x => x.id !== t.id); persist(); renderTasks(); renderHome(); renderFocusTaskOptions(); }
+        if (act === 'fokus') { goToView('fokus'); document.getElementById('focusTaskSelect').value = t.id; }
         if (act === 'toggle-subtasks') {
           if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id);
           renderTasks();
@@ -752,9 +446,9 @@
   }
 
   // ============================================================
-  // POMODORO ENGINE (shared by main view + mini widget)
+  // POMODORO ENGINE (shared by main view + focus view + mini widget)
   // ============================================================
-  const MODE_LABELS = { work: 'Fokus', short: 'Istirahat Pendek', long: 'Istirahat Panjang' };
+  const MODE_LABELS = { work: 'Fokus', short: 'Istirahat Kilat', long: 'Istirahat Santuy' };
   let timer = {
     mode: 'work', remaining: 25 * 60, total: 25 * 60, running: false,
     cycleCount: 0, linkedTaskId: '', interval: null,
@@ -784,19 +478,11 @@
     document.getElementById('btnResetTimer').addEventListener('click', () => resetTimerToMode(timer.mode));
     document.getElementById('btnSkipTimer').addEventListener('click', skipTimer);
     document.getElementById('btnOpenMiniWidget').addEventListener('click', () => window.api.openMiniTimer());
-
-    const brainDumpBtn = document.getElementById('btnToggleBrainDump');
-    const brainDumpWrap = document.getElementById('brainDumpWrap');
-    const brainDumpInput = document.getElementById('pomodoroBrainDump');
-    if (state.brainDump) brainDumpInput.value = state.brainDump;
-    brainDumpWrap.hidden = !state.brainDump; // kalau udah ada isinya sebelumnya, langsung kebuka
-    brainDumpBtn.addEventListener('click', () => {
-      brainDumpWrap.hidden = !brainDumpWrap.hidden;
-      if (!brainDumpWrap.hidden) brainDumpInput.focus();
-    });
-    brainDumpInput.addEventListener('input', (e) => {
-      state.brainDump = e.target.value;
-      persist();
+    document.getElementById('btnEnterFocusMode').addEventListener('click', () => {
+      // Mode Fokus is just this same timer shown full-and-centered — keep
+      // whichever task is already linked so nothing resets.
+      document.getElementById('focusTaskSelect').value = timer.linkedTaskId || '';
+      goToView('fokus');
     });
 
     window.api.onTimerControl((action) => {
@@ -844,6 +530,17 @@
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
+  // Only active while a work (fokus) segment is actually counting down AND
+  // the reminder toggle is on. Tells the main process whether switching
+  // away from Readlify should trigger the "balik fokus" nudge.
+  let lastGuardState = null;
+  function syncFocusGuard() {
+    const shouldGuard = timer.mode === 'work' && timer.running && !!state.focusSettings.blockEnabled;
+    if (shouldGuard === lastGuardState) return;
+    lastGuardState = shouldGuard;
+    window.api.setFocusGuard(shouldGuard);
+  }
+
   // ------------------------------------------------------------
   // Sound cue: a little two-note "ting" whenever a segment ends
   // (fokus -> istirahat, atau istirahat -> fokus lagi).
@@ -862,129 +559,25 @@
     } catch (e) { /* no Web Audio support — silently skip sound */ }
   }
 
-  // A handful of synthesized alarm sounds (no audio files bundled — every
-  // preset is just oscillators, scaled by `vol` which comes from the
-  // volume slider in Pengaturan). Each preset's own peak gain is tuned so
-  // that vol=1 feels "loud but not clipping" for that particular timbre.
-  const SOUND_PRESETS = {
-    'ting-lembut': {
-      label: 'Ting Lembut',
-      play(ctx, now, vol) {
-        [880, 1318.51].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          const start = now + i * 0.14;
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.linearRampToValueAtTime(0.22 * vol, start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 0.34);
-        });
-      },
-    },
-    'bel-klasik': {
-      label: 'Bel Klasik',
-      play(ctx, now, vol) {
-        [523.25, 659.25, 783.99].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.value = freq;
-          const start = now + i * 0.11;
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.linearRampToValueAtTime(0.25 * vol, start + 0.015);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 0.42);
-        });
-      },
-    },
-    'kring-digital': {
-      label: 'Kring Digital',
-      play(ctx, now, vol) {
-        [1046.5, 1046.5, 1046.5].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.value = freq;
-          const start = now + i * 0.16;
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.linearRampToValueAtTime(0.16 * vol, start + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.1);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 0.12);
-        });
-      },
-    },
-    'marimba-riang': {
-      label: 'Marimba Riang',
-      play(ctx, now, vol) {
-        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          const start = now + i * 0.09;
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.linearRampToValueAtTime(0.2 * vol, start + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(start);
-          osc.stop(start + 0.3);
-        });
-      },
-    },
-    'bel-timer-analog': {
-      label: 'Bel Timer Analog 🔔',
-      // Niruin bunyi klasik timer dapur/pomodoro analog (yang model puter
-      // angka itu lho): bel logam yang digetok cepet berkali-kali sama
-      // palu kecil di dalamnya sampai jadi bunyi "brrriiing" yang
-      // bergetar, bukan nada musik yang bersih kayak preset lain.
-      play(ctx, now, vol) {
-        const pulseCount = 18;
-        const pulseGap = 0.085; // ~11-12 ketokan/detik, mirip getaran bel mekanik asli
-        for (let i = 0; i < pulseCount; i++) {
-          const start = now + i * pulseGap;
-          // Dua harmonik logam (nada dasar + kuint di atasnya) numpuk jadi
-          // satu ketokan bel, biar gak terdengar kayak beep sintetis.
-          [2500, 3750].forEach((freq, h) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.value = freq;
-            const peak = (h === 0 ? 0.19 : 0.09) * vol;
-            gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.linearRampToValueAtTime(peak, start + 0.003);
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.075);
-            osc.connect(gain).connect(ctx.destination);
-            osc.start(start);
-            osc.stop(start + 0.08);
-          });
-        }
-      },
-    },
-  };
-
-  // Shared by the real end-of-session chime and the "Coba bunyi" preview
-  // button in Pengaturan. Boosted 2x flat on top of the volume slider —
-  // sebelumnya kerasa kurang nendang walau slider udah full ke kanan.
-  const ALARM_VOLUME_BOOST = 2;
-  function playChime() {
-    if (!audioCtx) return;
-    try {
-      const preset = SOUND_PRESETS[state.pomodoro.soundPreset] || SOUND_PRESETS['ting-lembut'];
-      preset.play(audioCtx, audioCtx.currentTime, state.pomodoro.soundVolume * ALARM_VOLUME_BOOST);
-    } catch (e) { /* never let a sound glitch break the timer */ }
-  }
-
   function playSessionEndChime() {
-    if (!state.soundEnabled) return;
-    playChime();
+    if (!state.soundEnabled || !audioCtx) return;
+    try {
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+      [880, 1318.51].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const start = now + i * 0.14;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(0.22, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.34);
+      });
+    } catch (e) { /* never let a sound glitch break the timer */ }
   }
 
   // Chrome/Electron's <input type="number"> silently bumps its value when the
@@ -1003,7 +596,7 @@
   function renderPomodoroLinkedOptions() {
     const sel = document.getElementById('cfgLinkedTask');
     const cur = sel.value;
-    sel.innerHTML = '<option value="">Tidak dikaitkan</option>';
+    sel.innerHTML = '<option value="">Gak dikaitin</option>';
     state.tasks.filter(t => t.status !== 'selesai').forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.id; opt.textContent = t.title;
@@ -1021,22 +614,20 @@
     timer.remaining = timer.total;
     renderTimerUI();
     syncMiniTimer();
+    syncFocusGuard();
   }
 
   function toggleTimer() {
     timer.running = !timer.running;
     if (timer.running) {
       unlockAudio();
-      // Starting a session counts as "sudah gerak" — reset the idle-nudge
-      // clock so the gentle check-in doesn't fire right in the middle of a
-      // session that's already running.
-      state.reminderLog.idleLastFireAt = Date.now();
       timer.interval = setInterval(tickTimer, 1000);
     } else {
       clearInterval(timer.interval);
     }
     renderTimerUI();
     syncMiniTimer();
+    syncFocusGuard();
   }
 
   function tickTimer() {
@@ -1079,6 +670,7 @@
     timer.interval = setInterval(tickTimer, 1000);
     renderTimerUI();
     syncMiniTimer();
+    syncFocusGuard();
   }
 
   function skipTimer() {
@@ -1095,17 +687,21 @@
     const txt = fmtMMSS(timer.remaining);
     const timerTimeEl = document.getElementById('timerTime');
     const timerModeEl = document.getElementById('timerMode');
+    const focusTimeEl = document.getElementById('focusTime');
     if (timerTimeEl) timerTimeEl.textContent = txt;
     if (timerModeEl) timerModeEl.textContent = MODE_LABELS[timer.mode];
+    if (focusTimeEl) focusTimeEl.textContent = txt;
 
     const ring = document.getElementById('ringProgress');
     if (ring) {
       const frac = timer.remaining / timer.total;
       ring.style.strokeDashoffset = String(RING_CIRC * (1 - frac));
     }
-    const label = timer.running ? 'Jeda' : (timer.remaining < timer.total ? 'Lanjut' : 'Mulai');
+    const label = timer.running ? 'Jeda' : (timer.remaining < timer.total ? 'Lanjut' : 'Gas');
     const btn = document.getElementById('btnStartPause');
     if (btn) btn.textContent = label;
+    const fbtn = document.getElementById('focusStartPause');
+    if (fbtn) fbtn.textContent = label;
   }
 
   function syncMiniTimer() {
@@ -1128,59 +724,169 @@
     document.getElementById('pomodoroHistoryEmpty').hidden = sessions.length > 0;
   }
 
+  // ============================================================
+  // FOCUS MODE (reuses the same timer engine) + site blocking
+  // ============================================================
+  // WhatsApp is intentionally never in this catalog — "blokir semua
+  // (kecuali WhatsApp)" is enforced simply by it never being offered here.
+  const SOCIAL_SITES = [
+    { id: 'instagram', label: 'Instagram', domains: ['instagram.com', 'www.instagram.com'] },
+    { id: 'tiktok', label: 'TikTok', domains: ['tiktok.com', 'www.tiktok.com'] },
+    { id: 'facebook', label: 'Facebook', domains: ['facebook.com', 'www.facebook.com', 'm.facebook.com'] },
+    { id: 'twitter', label: 'X / Twitter', domains: ['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'] },
+    { id: 'snapchat', label: 'Snapchat', domains: ['snapchat.com', 'www.snapchat.com'] },
+    { id: 'youtube', label: 'YouTube', domains: ['youtube.com', 'www.youtube.com', 'm.youtube.com'] },
+    { id: 'reddit', label: 'Reddit', domains: ['reddit.com', 'www.reddit.com'] },
+    { id: 'discord', label: 'Discord (web)', domains: ['discord.com', 'www.discord.com'] },
+  ];
 
-  // ============================================================
-  // POPUP DONASI — konfirmasi dulu sebelum ke link eksternal.
-  // Tombol "Lanjut" itu <a target="_blank"> biasa, jadi tetep
-  // dibuka di browser default lewat setWindowOpenHandler di main.js.
-  // ============================================================
-  function initDonate() {
-    const overlay = document.getElementById('donateModalOverlay');
-    const close = () => overlay.classList.remove('is-open');
-    document.querySelectorAll('[data-donate-open]').forEach(b => {
-      b.addEventListener('click', () => overlay.classList.add('is-open'));
+  const LOCK_PRAISES = [
+    '🔥 Gila sih, niat kamu buat komit emang beda level. Salut!',
+    '👏 Mantap banget! Ini baru namanya serius sama diri sendiri.',
+    '✨ Respect! Kamu baru aja upgrade diri jadi versi paling disiplin.',
+    '💪 Nice choice! Masa depan kamu bakal makasih banget soal ini.',
+  ];
+
+  let focusSessionActive = false; // true from first "Gas" until exit/reset
+
+  function initFocus() {
+    document.getElementById('focusStartPause').addEventListener('click', async () => {
+      const isFreshStart = !timer.running && timer.remaining === timer.total;
+      toggleTimer();
+      if (timer.running && isFreshStart) await startFocusBlockingIfNeeded();
     });
-    document.getElementById('btnDonateCancel').addEventListener('click', close);
-    document.getElementById('btnDonateGo').addEventListener('click', () => setTimeout(close, 0));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    document.getElementById('focusReset').addEventListener('click', async () => {
+      resetTimerToMode(timer.mode);
+      await stopFocusBlockingIfNeeded();
+    });
+    document.getElementById('btnExitFocus').addEventListener('click', async () => {
+      await stopFocusBlockingIfNeeded();
+      goToView('pomodoro');
+    });
+    document.getElementById('focusTaskSelect').addEventListener('change', (e) => {
+      timer.linkedTaskId = e.target.value;
+      document.getElementById('cfgLinkedTask').value = e.target.value;
+    });
+    document.getElementById('focusBrainDump').addEventListener('input', (e) => {
+      state.focusScratch = e.target.value;
+      persist();
+    });
+    if (state.focusScratch) document.getElementById('focusBrainDump').value = state.focusScratch;
+  }
+
+  function renderFocusTaskOptions() {
+    const sel = document.getElementById('focusTaskSelect');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Mau fokus ke tugas apa nih…</option>';
+    state.tasks.filter(t => t.status !== 'selesai').forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id; opt.textContent = t.title;
+      sel.appendChild(opt);
+    });
+    sel.value = cur;
+  }
+
+  function getBlockDomains() {
+    const fset = state.focusSettings;
+    if (!fset.blockEnabled) return [];
+    const ids = fset.blockMode === 'preset' ? SOCIAL_SITES.map(s => s.id) : fset.customSites;
+    return SOCIAL_SITES.filter(s => ids.includes(s.id)).flatMap(s => s.domains);
+  }
+
+  function setFocusBlockStatus(text) {
+    const el = document.getElementById('focusBlockStatus');
+    if (!el) return;
+    el.hidden = !text;
+    el.textContent = text;
+  }
+
+  async function startFocusBlockingIfNeeded() {
+    focusSessionActive = true;
+    applyFocusLockUI();
+    const domains = getBlockDomains();
+    if (!domains.length) return;
+    try {
+      await window.api.blockSites(domains);
+      setFocusBlockStatus('🧠 Reminder nyala: jauhin dulu medsos-nya sampai sesi ini kelar. WhatsApp tetep aman kok.');
+    } catch (e) {
+      // purely a soft in-app reminder now — nothing to actually fail at.
+    }
+  }
+
+  async function stopFocusBlockingIfNeeded() {
+    if (!focusSessionActive) return;
+    focusSessionActive = false;
+    applyFocusLockUI();
+    setFocusBlockStatus('');
+    try { await window.api.unblockSites(); } catch (e) { /* best effort */ }
+  }
+
+  // Disables Focus-Mode-affecting controls while a locked session is live —
+  // the point is you can't quietly weaken your own commitment mid-sesi.
+  function applyFocusLockUI() {
+    const locked = state.focusSettings.locked && focusSessionActive;
+    const taskSelect = document.getElementById('focusTaskSelect');
+    if (taskSelect) taskSelect.disabled = locked;
+
+    ['cfgBlockEnabled', 'blockModePreset', 'blockModeCustom', 'focusLockNo', 'focusLockYes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = locked;
+    });
+    document.querySelectorAll('#siteChecklist input').forEach(el => { el.disabled = locked; });
+
+    const note = document.getElementById('focusLockActiveNote');
+    if (note) note.hidden = !locked;
   }
 
   // ============================================================
-  // CITATIONS (APA 7th ed. / Harvard)
+  // DAFTAR PUSTAKA (APA 7 / MLA 9 / Chicago / IEEE / Vancouver)
+  // Data sumber disimpan mentah (authors, year, title, dst.). Teks daftar
+  // pustaka & kutipan in-text dihitung ulang tiap render sesuai gaya yang
+  // lagi dipilih, jadi ganti gaya = seluruh daftar langsung ikut berubah.
   // ============================================================
+  const CITE_STYLES = [
+    { id: 'apa7', label: 'APA 7th (Harvard, pedoman Faperta)', numbered: false,
+      hint: 'Gaya default pedoman Faperta Untidar. Kutipan: (Nama Tahun). Daftar diurutkan abjad.' },
+    { id: 'mla9', label: 'MLA 9th', numbered: false,
+      hint: 'MLA pakai nama + halaman tanpa tahun: (Nama 12). Daftar diurutkan abjad.' },
+    { id: 'chicago', label: 'Chicago 17th (nama–tahun)', numbered: false,
+      hint: 'Chicago nama–tahun: (Nama Tahun, 12). Daftar diurutkan abjad.' },
+    { id: 'ieee', label: 'IEEE (bernomor)', numbered: true,
+      hint: 'IEEE pakai nomor: [1]. Daftar berurutan sesuai kapan kamu nambahin sumbernya.' },
+    { id: 'vancouver', label: 'Vancouver (bernomor)', numbered: true,
+      hint: 'Vancouver pakai nomor: (1). Daftar berurutan sesuai kapan kamu nambahin sumbernya.' },
+  ];
+
+  const CITE_TYPES = [
+    { id: 'buku', label: 'Buku' },
+    { id: 'jurnal', label: 'Artikel jurnal' },
+    { id: 'prosiding', label: 'Artikel prosiding/seminar' },
+    { id: 'skripsi', label: 'Skripsi/Tesis/Disertasi' },
+    { id: 'internet', label: 'Artikel internet' },
+  ];
+
   const CITE_EXTRA_FIELDS = {
     buku: [
-      { id: 'edition', label: 'Edisi/cetakan', ph: 'Edisi Pertama' },
+      { id: 'edition', label: 'Edisi/cetakan (opsional)', ph: 'Edisi Pertama' },
       { id: 'publisher', label: 'Penerbit', ph: 'Kanisius' },
       { id: 'city', label: 'Kota terbit', ph: 'Yogyakarta' },
     ],
-    terjemahan: [
-      // Kolom "Penulis"/"Tahun"/"Judul" di atas diisi versi TERJEMAHAN yang
-      // kamu pegang. Judul & tahun asli sifatnya cuma pemanis tambahan di
-      // akhir referensi, gampang dilewatin kalau emang gak tahu/gak ada.
-      { id: 'translator', label: 'Diterjemahkan oleh', ph: 'Ahmad Fauzi' },
-      { id: 'publisher', label: 'Penerbit (versi terjemahan)', ph: 'Gramedia Pustaka Utama' },
-      { id: 'city', label: 'Kota terbit', ph: 'Jakarta' },
-      { id: 'originalTitle', label: 'Judul asli', ph: 'Judul dalam bahasa aslinya' },
-      { id: 'originalYear', label: 'Tahun terbit asli', ph: '1988' },
-    ],
     jurnal: [
-      { id: 'journal', label: 'Nama jurnal', ph: 'Jurnal Ilmu Pendidikan' },
+      { id: 'journal', label: 'Nama jurnal', ph: 'Jurnal Peternakan' },
       { id: 'volume', label: 'Volume', ph: '10' },
-      { id: 'issue', label: 'Nomor', ph: '1' },
+      { id: 'issue', label: 'Nomor (opsional)', ph: '1' },
       { id: 'pages', label: 'Halaman', ph: '31-38' },
     ],
     prosiding: [
-      { id: 'proceeding', label: 'Nama prosiding/seminar', ph: 'Prosiding Seminar Nasional Penelitian' },
+      { id: 'proceeding', label: 'Nama prosiding/seminar', ph: 'Prosiding Seminar Nasional Budidaya Pertanian' },
       { id: 'eventDate', label: 'Tanggal & bulan pelaksanaan', ph: '7 Juli 2011' },
-      { id: 'organizer', label: 'Penyelenggara', ph: 'Fakultas Ilmu Sosial, Universitas Contoh' },
+      { id: 'organizer', label: 'Penyelenggara (opsional)', ph: 'Fakultas Pertanian Universitas Bengkulu' },
       { id: 'pages', label: 'Halaman', ph: '71-84' },
     ],
     skripsi: [
       { id: 'workType', label: 'Jenis karya', ph: '', type: 'select', options: ['Skripsi', 'Tesis', 'Disertasi'] },
-      { id: 'program', label: 'Program studi & perguruan tinggi', ph: 'Program Studi Manajemen, Universitas Contoh' },
-      { id: 'city', label: 'Kota', ph: 'Yogyakarta' },
+      { id: 'program', label: 'Program studi & perguruan tinggi', ph: 'Fakultas Pertanian, Universitas Tidar' },
+      { id: 'city', label: 'Kota', ph: 'Magelang' },
     ],
     internet: [
       { id: 'url', label: 'Alamat (URL)', ph: 'https://...' },
@@ -1188,14 +894,27 @@
     ],
   };
 
+  function getCiteStyle() {
+    return CITE_STYLES.some(s => s.id === state.citationStyle) ? state.citationStyle : 'apa7';
+  }
+
   function initCitations() {
     const typeSel = document.getElementById('citeType');
     typeSel.addEventListener('change', renderCiteExtraFields);
     renderCiteExtraFields();
 
+    const styleSel = document.getElementById('citeStyleSelect');
+    styleSel.innerHTML = CITE_STYLES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    styleSel.value = getCiteStyle();
+    styleSel.addEventListener('change', () => {
+      state.citationStyle = styleSel.value;
+      persist();
+      renderCitations();
+    });
+
     document.getElementById('btnAddCitation').addEventListener('click', addCitation);
     document.getElementById('btnCopyAllCitations').addEventListener('click', () => {
-      const text = state.citations.map(c => c.reference).sort().join('\n\n');
+      const text = citationEntries().map(e => e.reference).join('\n\n');
       navigator.clipboard.writeText(text);
       flashButton('btnCopyAllCitations', 'Tersalin!');
     });
@@ -1217,15 +936,36 @@
     });
   }
 
+  // ---------- name helpers (input format: "Nama belakang, Inisial.") ----------
+  function parseAuthor(a) {
+    const i = a.indexOf(',');
+    return { last: (i < 0 ? a : a.slice(0, i)).trim(), ini: i < 0 ? '' : a.slice(i + 1).trim() };
+  }
+  function lastFirst(a) { const p = parseAuthor(a); return p.ini ? `${p.last}, ${p.ini}` : p.last; }
+  function initialsFirst(a) { const p = parseAuthor(a); return p.ini ? `${p.ini} ${p.last}` : p.last; }
+  function vancouverName(a) {
+    const p = parseAuthor(a);
+    const letters = p.ini.replace(/[^\p{L}]/gu, '');
+    return letters ? `${p.last} ${letters}` : p.last;
+  }
+  const cg = (f, k) => String(f[k] == null ? '' : f[k]).trim();
+  const joinParts = (parts, sep) => parts.filter(Boolean).join(sep == null ? ' ' : sep);
+  function endDot(s) { s = (s || '').trim(); return s && !/[.!?]$/.test(s) ? s + '.' : s; }
+  function quoted(s) { s = (s || '').trim().replace(/[.,]$/, ''); return s ? `"${s}."` : ''; }
+  function quotedComma(s) { s = (s || '').trim().replace(/[.,]$/, ''); return s ? `"${s},"` : ''; }
+  function cityPub(f) {
+    const city = cg(f, 'city'), pub = cg(f, 'publisher');
+    return pub ? (city ? `${city}: ${pub}` : pub) : city;
+  }
+
+  // ---------- APA 7 (Harvard) — gaya asli pedoman Faperta ----------
   function formatAuthorsForReference(authors) {
-    if (!authors || !authors.length) return '';
-    if (authors.length === 1) return authors[0];
+    if (authors.length <= 1) return authors[0] || '';
     if (authors.length <= 6) return authors.slice(0, -1).join(', ') + ' dan ' + authors[authors.length - 1];
     return authors.join(', ');
   }
 
   function formatAuthorsForInText(authors) {
-    if (!authors || !authors.length) return '';
     const lastNames = authors.map(a => a.split(',')[0].trim());
     if (lastNames.length === 1) return lastNames[0];
     if (lastNames.length === 2) return `${lastNames[0]} dan ${lastNames[1]}`;
@@ -1233,67 +973,212 @@
     return `${lastNames[0]} et al.`;
   }
 
-  // Kolom "Tahun" & "Penulis" sifatnya opsional, jadi in-text & referensi
-  // harus tetep masuk akal walau salah satu (atau semuanya) kosong — bukan
-  // nampilin "undefined" gitu aja.
-  function dot(s) { return s ? `${s}.` : ''; }
-  function joinNonEmpty(parts, sep = ' ') { return parts.filter(p => p && p.trim()).join(sep); }
-
-  function buildReference(type, f) {
-    const authorsRef = formatAuthorsForReference(f.authors);
-    const year = f.year || 't.t.'; // "tanpa tahun", gaya APA buat sumber tanpa tahun terbit
-    const parts = [dot(authorsRef), `(${year}).`, dot(f.title)];
-
+  function refApa7(type, f) {
+    // inisial penulis sudah berakhiran titik ("Fatisa, Y."), jangan dobel jadi "Y.."
+    const authorsRef = formatAuthorsForReference(f.authors).replace(/\.+$/, '');
     switch (type) {
       case 'buku':
-        parts.push(dot(f.edition), dot(f.publisher), dot(f.city));
-        break;
-      case 'terjemahan': {
-        if (f.translator) parts.push(`Diterjemahkan oleh ${f.translator}.`);
-        parts.push(dot(f.publisher), dot(f.city));
-        // Info karya asli ditaruh belakang sendiri, format umum dipakai
-        // buat buku terjemahan: "(Karya asli terbit tahun ...)".
-        if (f.originalTitle || f.originalYear) {
-          const bits = [];
-          if (f.originalTitle) bits.push(`judul asli: ${f.originalTitle}`);
-          if (f.originalYear) bits.push(`terbit tahun ${f.originalYear}`);
-          parts.push(`(Karya asli — ${bits.join(', ')}).`);
-        }
-        break;
-      }
-      case 'jurnal': {
-        let line = f.journal || '';
-        if (f.volume) line += (line ? ', ' : '') + f.volume + (f.issue ? `(${f.issue})` : '');
-        if (f.pages) line += (line ? ': ' : '') + f.pages;
-        parts.push(dot(line));
-        break;
-      }
+        return `${authorsRef}. (${f.year}). ${f.title}.${f.edition ? ' ' + f.edition + '.' : ''} ${f.publisher}. ${f.city}.`;
+      case 'jurnal':
+        return `${authorsRef}. (${f.year}). ${f.title}. ${f.journal}, ${f.volume}${f.issue ? '(' + f.issue + ')' : ''}: ${f.pages}.`;
       case 'prosiding':
-        parts.push(dot(f.proceeding), dot(f.eventDate), dot(f.organizer), dot(f.pages));
-        break;
+        return `${authorsRef}. (${f.year}). ${f.title}. ${f.proceeding}. ${f.eventDate}.${f.organizer ? ' ' + f.organizer + ':' : ''} ${f.pages}.`;
       case 'skripsi':
-        parts.push(dot(f.workType), dot(f.program), dot(f.city));
-        break;
+        return `${authorsRef}. (${f.year}). ${f.title}. ${f.workType}. ${f.program}. ${f.city}.`;
       case 'internet':
-        parts.push(dot(f.url), f.accessDate ? `Diakses ${f.accessDate}.` : '');
-        break;
+        return `${authorsRef}. (${f.year}). ${f.title}. ${f.url}. Diakses ${f.accessDate}.`;
       default:
-        break;
+        return `${authorsRef}. (${f.year}). ${f.title}.`;
     }
-    return joinNonEmpty(parts) || 'Sumber baru (belum ada keterangan diisi)';
   }
 
-  function buildInText(f) {
-    const author = formatAuthorsForInText(f.authors);
-    const year = f.year || 't.t.';
-    if (author) return `(${author} ${year})`;
-    if (f.title) {
-      // Gak ada nama penulis: pakai judul singkat sebagai gantinya, gaya
-      // Harvard/APA umum buat sumber tanpa penulis jelas.
-      const shortTitle = f.title.length > 40 ? f.title.slice(0, 40).trim() + '…' : f.title;
-      return `("${shortTitle}" ${year})`;
+  // ---------- MLA 9 ----------
+  function mlaAuthors(a) {
+    if (a.length <= 1) return a[0] ? lastFirst(a[0]) : '';
+    if (a.length === 2) return `${lastFirst(a[0])}, and ${initialsFirst(a[1])}`;
+    return `${lastFirst(a[0])}, et al.`;
+  }
+  function refMla9(type, f) {
+    const au = endDot(mlaAuthors(f.authors));
+    const y = cg(f, 'year');
+    switch (type) {
+      case 'buku':
+        return joinParts([au, endDot(f.title), endDot(joinParts([cg(f, 'edition'), cg(f, 'publisher'), y], ', '))]);
+      case 'jurnal': {
+        const vol = cg(f, 'volume') ? `vol. ${cg(f, 'volume')}` : '';
+        const no = cg(f, 'issue') ? `no. ${cg(f, 'issue')}` : '';
+        const pp = cg(f, 'pages') ? `pp. ${cg(f, 'pages')}` : '';
+        return joinParts([au, quoted(f.title), endDot(joinParts([cg(f, 'journal'), vol, no, y, pp], ', '))]);
+      }
+      case 'prosiding': {
+        const pp = cg(f, 'pages') ? `pp. ${cg(f, 'pages')}` : '';
+        return joinParts([au, quoted(f.title), endDot(joinParts([cg(f, 'proceeding'), cg(f, 'organizer'), cg(f, 'eventDate') || y, pp], ', '))]);
+      }
+      case 'skripsi':
+        return joinParts([au, endDot(f.title), endDot(y), endDot(joinParts([cg(f, 'program'), cg(f, 'city'), cg(f, 'workType')], ', '))]);
+      case 'internet':
+        return joinParts([au, quoted(f.title), endDot(joinParts([y, cg(f, 'url')], ', ')), cg(f, 'accessDate') ? `Accessed ${cg(f, 'accessDate')}.` : '']);
+      default:
+        return joinParts([au, quoted(f.title), endDot(y)]);
     }
-    return `(${year})`;
+  }
+
+  // ---------- Chicago 17 (nama–tahun) ----------
+  function chicagoAuthors(a) {
+    if (a.length <= 1) return a[0] ? lastFirst(a[0]) : '';
+    const shown = a.length > 10 ? a.slice(0, 7) : a;
+    const names = shown.map((x, i) => (i === 0 ? lastFirst(x) : initialsFirst(x)));
+    if (a.length > 10) return names.join(', ') + ', et al.';
+    return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+  }
+  function refChicago(type, f) {
+    const au = endDot(chicagoAuthors(f.authors));
+    const y = endDot(cg(f, 'year'));
+    switch (type) {
+      case 'buku':
+        return joinParts([au, y, endDot(f.title), endDot(cg(f, 'edition')), endDot(cityPub(f))]);
+      case 'jurnal': {
+        const vi = cg(f, 'volume') + (cg(f, 'issue') ? ` (${cg(f, 'issue')})` : '');
+        const tail = joinParts([cg(f, 'journal'), vi], ' ') + (cg(f, 'pages') ? `: ${cg(f, 'pages')}` : '');
+        return joinParts([au, y, quoted(f.title), endDot(tail)]);
+      }
+      case 'prosiding': {
+        const inPart = `In ${cg(f, 'proceeding')}` + (cg(f, 'pages') ? `, ${cg(f, 'pages')}` : '');
+        return joinParts([au, y, quoted(f.title), endDot(inPart), endDot(joinParts([cg(f, 'organizer'), cg(f, 'eventDate')], ', '))]);
+      }
+      case 'skripsi':
+        return joinParts([au, y, quoted(f.title), endDot(joinParts([cg(f, 'workType'), cg(f, 'program'), cg(f, 'city')], ', '))]);
+      case 'internet':
+        return joinParts([au, y, quoted(f.title), cg(f, 'accessDate') ? `Accessed ${cg(f, 'accessDate')}.` : '', endDot(cg(f, 'url'))]);
+      default:
+        return joinParts([au, y, quoted(f.title)]);
+    }
+  }
+
+  // ---------- IEEE ----------
+  function ieeeAuthors(a) {
+    const n = a.map(initialsFirst);
+    if (n.length <= 1) return n[0] || '';
+    if (n.length === 2) return `${n[0]} and ${n[1]}`;
+    if (n.length <= 6) return n.slice(0, -1).join(', ') + ', and ' + n[n.length - 1];
+    return `${n[0]} et al.`;
+  }
+  function refIeee(type, f) {
+    const au = ieeeAuthors(f.authors);
+    const y = cg(f, 'year');
+    switch (type) {
+      case 'buku': {
+        const cp = cityPub(f);
+        return `${au}, ${cg(f, 'title')}${cg(f, 'edition') ? ', ' + cg(f, 'edition') : ''}. ${cp ? cp + ', ' : ''}${y}.`;
+      }
+      case 'jurnal': {
+        const vol = cg(f, 'volume') ? `vol. ${cg(f, 'volume')}` : '';
+        const no = cg(f, 'issue') ? `no. ${cg(f, 'issue')}` : '';
+        const pp = cg(f, 'pages') ? `pp. ${cg(f, 'pages')}` : '';
+        return `${au}, ${quotedComma(f.title)} ${joinParts([cg(f, 'journal'), vol, no, pp, y], ', ')}.`;
+      }
+      case 'prosiding': {
+        const pp = cg(f, 'pages') ? `pp. ${cg(f, 'pages')}` : '';
+        return `${au}, ${quotedComma(f.title)} in ${joinParts([cg(f, 'proceeding'), cg(f, 'organizer'), cg(f, 'eventDate') || y, pp], ', ')}.`;
+      }
+      case 'skripsi':
+        return `${au}, ${quotedComma(f.title)} ${joinParts([cg(f, 'workType'), cg(f, 'program'), cg(f, 'city'), y], ', ')}.`;
+      case 'internet':
+        return `${au}, ${quotedComma(f.title)} ${y}. [Online]. Available: ${cg(f, 'url')}${cg(f, 'accessDate') ? `. [Accessed: ${cg(f, 'accessDate')}]` : ''}.`;
+      default:
+        return `${au}, ${quotedComma(f.title)} ${y}.`;
+    }
+  }
+
+  // ---------- Vancouver ----------
+  function vancouverAuthors(a) {
+    const n = a.map(vancouverName);
+    return n.length > 6 ? n.slice(0, 6).join(', ') + ', et al.' : n.join(', ');
+  }
+  function refVancouver(type, f) {
+    const au = endDot(vancouverAuthors(f.authors));
+    const y = cg(f, 'year');
+    switch (type) {
+      case 'buku': {
+        const city = cg(f, 'city'), pub = cg(f, 'publisher');
+        const place = pub ? (city ? `${city}: ${pub}` : pub) : city;
+        return joinParts([au, endDot(f.title), endDot(cg(f, 'edition')), `${place ? place + '; ' : ''}${y}.`]);
+      }
+      case 'jurnal': {
+        const vi = cg(f, 'volume') + (cg(f, 'issue') ? `(${cg(f, 'issue')})` : '');
+        return joinParts([au, endDot(f.title), endDot(cg(f, 'journal')), `${y};${vi}${cg(f, 'pages') ? ':' + cg(f, 'pages') : ''}.`]);
+      }
+      case 'prosiding':
+        return joinParts([au, endDot(f.title), `In: ${joinParts([cg(f, 'proceeding'), cg(f, 'eventDate') || y, cg(f, 'organizer')], '; ')}.`, cg(f, 'pages') ? `p. ${cg(f, 'pages')}.` : '']);
+      case 'skripsi': {
+        const city = cg(f, 'city');
+        return joinParts([au, `${cg(f, 'title').replace(/[.]$/, '')} [${cg(f, 'workType') || 'Skripsi'}].`, `${city ? city + ': ' : ''}${cg(f, 'program')}; ${y}.`]);
+      }
+      case 'internet':
+        return joinParts([au, `${cg(f, 'title').replace(/[.]$/, '')} [Internet].`, `${y}${cg(f, 'accessDate') ? ` [cited ${cg(f, 'accessDate')}]` : ''}.`, cg(f, 'url') ? `Available from: ${cg(f, 'url')}` : '']);
+      default:
+        return joinParts([au, endDot(f.title), `${y}.`]);
+    }
+  }
+
+  function buildReference(style, type, f, num) {
+    switch (style) {
+      case 'mla9': return refMla9(type, f);
+      case 'chicago': return refChicago(type, f);
+      case 'ieee': return `[${num}] ${refIeee(type, f)}`;
+      case 'vancouver': return `${num}. ${refVancouver(type, f)}`;
+      default: return refApa7(type, f);
+    }
+  }
+
+  // ---------- kutipan in-text ----------
+  // page (opsional) diisi dari EdPDF kalau kutipannya diambil dari halaman tertentu.
+  function buildInText(style, f, num, page) {
+    const lastNames = f.authors.map(a => parseAuthor(a).last);
+    const pg = page ? String(page) : '';
+    switch (style) {
+      case 'mla9': {
+        const au = lastNames.length === 1 ? lastNames[0]
+          : lastNames.length === 2 ? `${lastNames[0]} and ${lastNames[1]}` : `${lastNames[0]} et al.`;
+        return `(${au}${pg ? ' ' + pg : ''})`;
+      }
+      case 'chicago': {
+        const au = lastNames.length === 1 ? lastNames[0]
+          : lastNames.length === 2 ? `${lastNames[0]} and ${lastNames[1]}`
+          : lastNames.length === 3 ? `${lastNames[0]}, ${lastNames[1]}, and ${lastNames[2]}` : `${lastNames[0]} et al.`;
+        return `(${au} ${f.year}${pg ? ', ' + pg : ''})`;
+      }
+      case 'ieee': return `[${num}${pg ? ', p. ' + pg : ''}]`;
+      case 'vancouver': return `(${num}${pg ? ', p. ' + pg : ''})`;
+      default: return `(${formatAuthorsForInText(f.authors)} ${f.year}${pg ? ', hlm. ' + pg : ''})`;
+    }
+  }
+
+  // Daftar terurut sesuai gaya: bernomor -> urutan ditambahkan; lainnya -> abjad.
+  function citationEntries() {
+    const style = getCiteStyle();
+    const meta = CITE_STYLES.find(s => s.id === style);
+    const withIdx = state.citations.map((c, i) => ({ c, i }));
+    if (meta.numbered) {
+      withIdx.sort((a, b) => ((a.c.addedAt || 0) - (b.c.addedAt || 0)) || (a.i - b.i));
+    } else {
+      const key = (c) => (c.fields.authors || []).map(lastFirst).join(' ').toLowerCase() + ' ' + (c.fields.year || '');
+      withIdx.sort((a, b) => key(a.c).localeCompare(key(b.c)) || (a.i - b.i));
+    }
+    return withIdx.map(({ c }, idx) => {
+      const num = idx + 1;
+      return {
+        c, num,
+        reference: buildReference(style, c.type, c.fields, num),
+        inText: buildInText(style, c.fields, num, null),
+      };
+    });
+  }
+
+  function inTextForCitation(id, page) {
+    const style = getCiteStyle();
+    const entry = citationEntries().find(e => e.c.id === id);
+    return entry ? buildInText(style, entry.c.fields, entry.num, page) : '';
   }
 
   function addCitation() {
@@ -1301,6 +1186,7 @@
     const authors = document.getElementById('citeAuthors').value.split('\n').map(s => s.trim()).filter(Boolean);
     const year = document.getElementById('citeYear').value.trim();
     const title = document.getElementById('citeTitle').value.trim();
+    if (!authors.length || !year || !title) return;
 
     const extra = {};
     (CITE_EXTRA_FIELDS[type] || []).forEach(f => {
@@ -1308,21 +1194,8 @@
       if (el) extra[f.id] = el.value.trim();
     });
 
-    // Semua kolom di form ini OPSIONAL — isi aja yang kamu punya. Satu-satunya
-    // yang dicegah adalah klik "Tambah" pas semua kolom bener-bener kosong,
-    // karena gak ada apa pun buat disimpan. Kalau ini kena, kasih tau lewat
-    // tombolnya sendiri (bukan diem-diem gak ngapa-ngapain kayak sebelumnya).
-    const hasAnyValue = authors.length || year || title || Object.values(extra).some(Boolean);
-    if (!hasAnyValue) {
-      flashButton('btnAddCitation', 'Isi salah satu kolom dulu');
-      return;
-    }
-
     const fields = { authors, year, title, ...extra };
-    const reference = buildReference(type, fields);
-    const inText = buildInText(fields);
-
-    state.citations.push({ id: uid(), type, fields, reference, inText });
+    state.citations.push({ id: uid(), type, fields, addedAt: Date.now() });
     persist();
     renderCitations();
 
@@ -1335,23 +1208,58 @@
   function renderCitations() {
     const list = document.getElementById('citationList');
     list.innerHTML = '';
-    const sorted = [...state.citations].sort((a, b) => a.reference.localeCompare(b.reference));
-    sorted.forEach(c => {
+    const entries = citationEntries();
+    const meta = CITE_STYLES.find(s => s.id === getCiteStyle());
+    const hint = document.getElementById('citeStyleHint');
+    if (hint) hint.textContent = meta.hint;
+    entries.forEach(({ c, reference, inText }) => {
       const li = document.createElement('li');
       li.className = 'citation-item';
-      li.innerHTML = `<button class="del" data-id="${c.id}" title="Hapus">✕</button>${escapeHtml(c.reference)}<span class="in-text">${escapeHtml(c.inText)}</span>`;
+      li.innerHTML = `<button class="del" data-id="${c.id}" title="Hapus" aria-label="Hapus sumber ini">✕</button>${escapeHtml(reference)}<span class="in-text">${escapeHtml(inText)}</span>`;
       li.addEventListener('click', (e) => {
         if (e.target.classList.contains('del')) return;
-        navigator.clipboard.writeText(c.inText);
-        showToast('Kutipan dalam teks disalin', { emoji: '📋' });
+        navigator.clipboard.writeText(inText);
       });
       li.querySelector('.del').addEventListener('click', () => {
         state.citations = state.citations.filter(x => x.id !== c.id);
         persist(); renderCitations();
+        if (window.EdPDF && window.EdPDF.onCitationRemoved) window.EdPDF.onCitationRemoved(c.id);
       });
       list.appendChild(li);
     });
-    document.getElementById('citationEmpty').hidden = sorted.length > 0;
+    document.getElementById('citationEmpty').hidden = entries.length > 0;
+  }
+
+
+  // ============================================================
+  // JEMBATAN KE EdPDF (edpdf.js) — EdPDF cuma lewat sini buat nyentuh
+  // state, Daftar Pustaka, dan navigasi.
+  // ============================================================
+  function initEdPdf() {
+    if (!window.EdPDF) return;
+    window.EdPDF.init({
+      getState: () => state,
+      persist,
+      uid,
+      goToView,
+      citeTypes: CITE_TYPES,
+      citeExtraFields: CITE_EXTRA_FIELDS,
+      // Tambah sumber ke Daftar Pustaka, atau perbarui kalau id-nya sudah ada.
+      upsertCitation(id, type, fields) {
+        const existing = id && state.citations.find(c => c.id === id);
+        if (existing) {
+          existing.type = type;
+          existing.fields = fields;
+        } else {
+          id = uid();
+          state.citations.push({ id, type, fields, addedAt: Date.now(), from: 'edpdf' });
+        }
+        persist();
+        renderCitations();
+        return id;
+      },
+      inText: (id, page) => inTextForCitation(id, page),
+    });
   }
 
   function flashButton(id, text) {
@@ -1404,33 +1312,6 @@
   // SETTINGS
   // ============================================================
   function initSettings() {
-    const nameInput = document.getElementById('cfgUserName');
-    const nameStatus = document.getElementById('cfgUserNameStatus');
-    syncProfileNameInput();
-
-    document.getElementById('btnSaveUserName').addEventListener('click', () => {
-      const name = nameInput.value.trim();
-      if (!name) {
-        nameInput.focus();
-        nameInput.classList.add('input-error');
-        return;
-      }
-      nameInput.classList.remove('input-error');
-      state.userName = name;
-      persist();
-      initHome();
-      renderHome();
-      if (nameStatus) {
-        nameStatus.textContent = 'Tersimpan ✓';
-        clearTimeout(nameStatus._t);
-        nameStatus._t = setTimeout(() => { nameStatus.textContent = ''; }, 2000);
-      }
-    });
-    nameInput.addEventListener('keydown', (e) => {
-      nameInput.classList.remove('input-error');
-      if (e.key === 'Enter') document.getElementById('btnSaveUserName').click();
-    });
-
     const sel = document.getElementById('cfgTheme');
     sel.value = state.theme;
     sel.addEventListener('change', () => {
@@ -1439,34 +1320,96 @@
       applyTheme();
     });
 
-    document.getElementById('btnResetData').addEventListener('click', () => {
-      if (!confirm('Hapus semua data (tugas, daftar pustaka, catatan)? Nama panggilanmu tetap disimpan. Tindakan ini tidak dapat dibatalkan.')) return;
-      const keepName = state.userName;
-      // Catatan persetujuan Syarat & Ketentuan sengaja dipertahankan.
-      const keepTerms = {
-        termsAccepted: state.termsAccepted,
-        termsAcceptedAt: state.termsAcceptedAt,
-        termsVersion: state.termsVersion,
-        termsHistory: state.termsHistory,
-      };
-      state = DEFAULT_STATE();
-      state.userName = keepName;
-      Object.assign(state, keepTerms);
+    if (window.api.getVersion) {
+      window.api.getVersion().then((v) => { const e = document.getElementById('appVersion'); if (e && v) e.textContent = 'v' + v; }).catch(() => {});
+    }
+
+    const pdfBtn = document.getElementById('btnPdfDefault');
+    if (pdfBtn) {
+      if (window.api.openDefaultAppsSettings) pdfBtn.onclick = () => { window.api.openDefaultAppsSettings(); };
+      else pdfBtn.hidden = true;
+    }
+
+    const soundToggle = document.getElementById('cfgSoundEnabled');
+    soundToggle.checked = state.soundEnabled;
+    soundToggle.addEventListener('change', () => {
+      state.soundEnabled = soundToggle.checked;
       persist();
-      renderTermsStatus();
+    });
+
+    document.getElementById('btnResetData').addEventListener('click', () => {
+      if (!confirm('Hapus semua data (tugas, daftar pustaka, catatan)? Tindakan ini gak bisa dibatalin.')) return;
+      state = DEFAULT_STATE();
+      persist();
       renderAll();
       initSettings();
-      // Cuma nyegerin tampilan input-nya balik ke default — listener-nya
-      // udah kepasang sejak boot(), gak perlu (dan gak boleh) dipasang dua kali.
-      syncSoundInputsFromState();
-      syncReminderInputsFromState();
-      renderStudyTimeList();
     });
+
+    initFocusSettings();
   }
 
-  function syncProfileNameInput() {
-    const nameInput = document.getElementById('cfgUserName');
-    if (nameInput) nameInput.value = state.userName || '';
+  function initFocusSettings() {
+    const fset = state.focusSettings;
+
+    const blockEnabled = document.getElementById('cfgBlockEnabled');
+    blockEnabled.checked = fset.blockEnabled;
+    document.getElementById('blockModeGroup').hidden = !fset.blockEnabled;
+    blockEnabled.addEventListener('change', (e) => {
+      fset.blockEnabled = e.target.checked;
+      persist();
+      document.getElementById('blockModeGroup').hidden = !fset.blockEnabled;
+      syncFocusGuard();
+    });
+
+    document.getElementById('blockModePreset').checked = fset.blockMode === 'preset';
+    document.getElementById('blockModeCustom').checked = fset.blockMode === 'custom';
+    [['blockModePreset', 'preset'], ['blockModeCustom', 'custom']].forEach(([id, val]) => {
+      document.getElementById(id).addEventListener('change', () => {
+        if (!document.getElementById(id).checked) return;
+        fset.blockMode = val;
+        persist();
+        renderSiteChecklist();
+      });
+    });
+    renderSiteChecklist();
+
+    document.getElementById('focusLockNo').checked = !fset.locked;
+    document.getElementById('focusLockYes').checked = fset.locked;
+    document.getElementById('focusLockNo').addEventListener('change', () => {
+      if (!document.getElementById('focusLockNo').checked) return;
+      fset.locked = false;
+      persist();
+      document.getElementById('focusLockPraise').textContent = '';
+    });
+    document.getElementById('focusLockYes').addEventListener('change', () => {
+      if (!document.getElementById('focusLockYes').checked) return;
+      fset.locked = true;
+      persist();
+      document.getElementById('focusLockPraise').textContent = LOCK_PRAISES[Math.floor(Math.random() * LOCK_PRAISES.length)];
+    });
+
+    applyFocusLockUI();
+  }
+
+  function renderSiteChecklist() {
+    const wrap = document.getElementById('siteChecklist');
+    const show = state.focusSettings.blockMode === 'custom';
+    wrap.hidden = !show;
+    if (!show) return;
+    wrap.innerHTML = '';
+    SOCIAL_SITES.forEach(site => {
+      const row = document.createElement('label');
+      row.className = 'site-check';
+      const checked = state.focusSettings.customSites.includes(site.id);
+      row.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''} /> ${site.label}`;
+      row.querySelector('input').addEventListener('change', (e) => {
+        const set = new Set(state.focusSettings.customSites);
+        if (e.target.checked) set.add(site.id); else set.delete(site.id);
+        state.focusSettings.customSites = [...set];
+        persist();
+      });
+      wrap.appendChild(row);
+    });
   }
 
   function applyTheme() {
@@ -1475,273 +1418,6 @@
       effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'cozy-dark' : 'cozy-light';
     }
     document.body.setAttribute('data-theme', effective);
-  }
-
-  // ============================================================
-  // SOUND SETTINGS (volume + pilihan suara alarm Pomodoro)
-  // ============================================================
-  function initSoundSettings() {
-    const soundToggle = document.getElementById('cfgSoundEnabled');
-    soundToggle.addEventListener('change', () => {
-      state.soundEnabled = soundToggle.checked;
-      persist();
-    });
-
-    const presetSel = document.getElementById('cfgSoundPreset');
-    Object.entries(SOUND_PRESETS).forEach(([key, p]) => {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = p.label;
-      presetSel.appendChild(opt);
-    });
-    presetSel.addEventListener('change', () => {
-      state.pomodoro.soundPreset = presetSel.value;
-      persist();
-    });
-
-    const volumeSlider = document.getElementById('cfgSoundVolume');
-    // 'input' updates live while dragging so "Coba bunyi" previews the
-    // in-progress value; the actual save only happens on 'change' (drag
-    // release) so we're not writing to disk on every pixel of movement.
-    volumeSlider.addEventListener('input', () => {
-      state.pomodoro.soundVolume = parseInt(volumeSlider.value, 10) / 100;
-    });
-    volumeSlider.addEventListener('change', () => persist());
-
-    document.getElementById('btnTestSound').addEventListener('click', () => {
-      unlockAudio();
-      playChime();
-    });
-
-    syncSoundInputsFromState();
-  }
-
-  function syncSoundInputsFromState() {
-    document.getElementById('cfgSoundEnabled').checked = state.soundEnabled;
-    document.getElementById('cfgSoundPreset').value = state.pomodoro.soundPreset;
-    document.getElementById('cfgSoundVolume').value = String(Math.round(state.pomodoro.soundVolume * 100));
-  }
-
-  // ============================================================
-  // REMINDERS — pengingat jam belajar & deadline tugas
-  // ------------------------------------------------------------
-  // Ditulis biar ramah buat otak ADHD: kalimatnya dirandom dari beberapa
-  // variasi (biar gak jadi "wallpaper" yang otomatis di-skip begitu udah
-  // hafal bunyinya), gak nge-judge kalau telat, dan tiap pengingat cuma
-  // nembak sekali per slot/hari (dicatat di state.reminderLog) biar gak
-  // berasa nge-spam.
-  // ============================================================
-  const STUDY_REMINDER_MESSAGES = [
-    'Waktunya belajar. Tidak perlu langsung yang berat; mulai dari satu langkah kecil saja.',
-    'Waktunya duduk sebentar. Buka satu tugas yang paling mudah dulu supaya fokusmu mulai terbentuk.',
-    'Pengingat jam belajar. Jika terasa berat untuk mulai, coba atur timer 5 menit dulu, lalu lanjutkan jika masih mau.',
-    'Sudah waktunya. Tidak apa-apa jika pikiranmu masih ramai; tulis dulu di Catatan Cepat, lalu mulai pelan-pelan.',
-    'Jam belajarmu sudah tiba. Kamu tidak harus langsung produktif; duduk dan mulai saja sudah cukup.',
-  ];
-
-  const IDLE_NUDGE_MESSAGES = [
-    'Masih di sana? Tidak apa-apa jika belum bergerak. Coba satu langkah kecil dulu.',
-    'Sekadar mengingatkan: jika sulit memulai, coba atur timer Pomodoro 5 menit dulu.',
-    'Kamu belum mulai apa pun. Tidak apa-apa; tarik napas, lalu pilih satu tugas paling kecil untuk dimulai.',
-    'Jika sulit fokus, itu wajar. Coba mulai dari langkah yang paling ringan.',
-  ];
-
-  const DEADLINE_MESSAGES = {
-    3: [
-      "Tenggat '{title}' tinggal 3 hari lagi. Masih longgar, tetapi sebaiknya mulai dicicil dari sekarang.",
-      "'{title}' jatuh tempo 3 hari lagi. Pecah menjadi langkah-langkah kecil supaya tidak menumpuk di akhir.",
-    ],
-    1: [
-      "Besok tenggat '{title}'. Malam ini bisa disiapkan sedikit supaya besok tidak terburu-buru.",
-      "H-1 untuk '{title}'. Tidak perlu selesai semuanya sekarang, tetapi sedikit kemajuan malam ini akan sangat membantu besok.",
-    ],
-    0: [
-      "Hari ini tenggat '{title}'. Kerjakan satu langkah di depanmu dulu; kamu pasti bisa.",
-      "'{title}' harus selesai hari ini. Fokus ke satu langkah di depan mata; tidak perlu memikirkan semuanya sekaligus.",
-    ],
-  };
-
-  const OVERDUE_MESSAGES = [
-    "'{title}' sudah melewati tenggat. Tidak apa-apa; ini bukan soal gagal. Lanjutkan dari bagian terakhir yang kamu kerjakan.",
-    "Pengingat lembut: '{title}' masih menunggu, meski tenggatnya sudah lewat. Satu langkah kecil sekarang tetap berarti.",
-  ];
-
-  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-  function fillTemplate(tpl, task) { return tpl.replace('{title}', task ? task.title : 'tugas kamu'); }
-
-  function sendAppNotification(title, body, goto) {
-    if (window.api.showNotification) window.api.showNotification({ title, body, goto });
-  }
-
-  let reminderInterval = null;
-  function initReminders() {
-    document.getElementById('cfgStudyReminderEnabled').addEventListener('change', (e) => {
-      state.reminders.studyEnabled = e.target.checked;
-      persist();
-    });
-    document.getElementById('btnAddStudyTime').addEventListener('click', () => {
-      const input = document.getElementById('cfgStudyTimeInput');
-      const val = input.value;
-      if (!val) return;
-      if (!state.reminders.studyTimes.includes(val)) {
-        state.reminders.studyTimes.push(val);
-        state.reminders.studyTimes.sort();
-        persist();
-        renderStudyTimeList();
-      }
-    });
-    document.getElementById('cfgIdleNudgeEnabled').addEventListener('change', (e) => {
-      state.reminders.idleNudgeEnabled = e.target.checked;
-      persist();
-    });
-    document.getElementById('cfgIdleNudgeMinutes').addEventListener('change', (e) => {
-      state.reminders.idleNudgeMinutes = parseInt(e.target.value, 10) || 45;
-      persist();
-    });
-    document.getElementById('cfgDeadlineEnabled').addEventListener('change', (e) => {
-      state.reminders.deadlineEnabled = e.target.checked;
-      persist();
-    });
-    document.getElementById('cfgOverdueEnabled').addEventListener('change', (e) => {
-      state.reminders.overdueEnabled = e.target.checked;
-      persist();
-    });
-    document.querySelectorAll('.lead-day-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const day = parseInt(chip.dataset.lead, 10);
-        const set = new Set(state.reminders.deadlineLeadDays);
-        if (set.has(day)) set.delete(day); else set.add(day);
-        state.reminders.deadlineLeadDays = [...set].sort((a, b) => b - a);
-        chip.classList.toggle('is-active', set.has(day));
-        persist();
-      });
-    });
-
-    syncReminderInputsFromState();
-    renderStudyTimeList();
-
-    if (window.api.onNotificationClicked) {
-      window.api.onNotificationClicked((goto) => { if (goto) goToView(goto); });
-    }
-
-    // Delay the first sweep so a fresh launch doesn't immediately dump a
-    // pile of "kamu lagi idle" / deadline notifications before the user's
-    // even looked at the screen.
-    setTimeout(checkReminders, 8000);
-    reminderInterval = setInterval(checkReminders, 30000);
-  }
-
-  function syncReminderInputsFromState() {
-    const r = state.reminders;
-    document.getElementById('cfgStudyReminderEnabled').checked = r.studyEnabled;
-    document.getElementById('cfgIdleNudgeEnabled').checked = r.idleNudgeEnabled;
-    document.getElementById('cfgIdleNudgeMinutes').value = String(r.idleNudgeMinutes);
-    document.getElementById('cfgDeadlineEnabled').checked = r.deadlineEnabled;
-    document.getElementById('cfgOverdueEnabled').checked = r.overdueEnabled;
-    document.querySelectorAll('.lead-day-chip').forEach(chip => {
-      chip.classList.toggle('is-active', r.deadlineLeadDays.includes(parseInt(chip.dataset.lead, 10)));
-    });
-  }
-
-  function renderStudyTimeList() {
-    const wrap = document.getElementById('studyTimeList');
-    wrap.innerHTML = '';
-    state.reminders.studyTimes.forEach(t => {
-      const chip = document.createElement('span');
-      chip.className = 'time-chip';
-      chip.innerHTML = `${t}<button type="button" title="Hapus">✕</button>`;
-      chip.querySelector('button').addEventListener('click', () => {
-        state.reminders.studyTimes = state.reminders.studyTimes.filter(x => x !== t);
-        persist();
-        renderStudyTimeList();
-      });
-      wrap.appendChild(chip);
-    });
-    document.getElementById('studyTimeEmpty').hidden = state.reminders.studyTimes.length > 0;
-  }
-
-  function checkReminders() {
-    const r = state.reminders;
-    const rl = state.reminderLog;
-    const now = new Date();
-    const hhmm = now.toTimeString().slice(0, 5);
-
-    // 1) Jam belajar tetap
-    if (r.studyEnabled && r.studyTimes.includes(hhmm) && !rl.studyFiredTimes.includes(hhmm)) {
-      rl.studyFiredTimes.push(hhmm);
-      persist();
-      sendAppNotification('Jam belajar 📚', pickRandom(STUDY_REMINDER_MESSAGES), 'beranda');
-    }
-
-    // 2) Nudge lembut kalau lagi gak ngapa-ngapain (timer gak jalan, dan
-    // masih ada tugas yang belum kelar)
-    if (r.idleNudgeEnabled && !timer.running) {
-      const idleMs = now.getTime() - (rl.idleLastFireAt || 0);
-      if (idleMs >= r.idleNudgeMinutes * 60000 && state.tasks.some(t => t.status !== 'selesai')) {
-        rl.idleLastFireAt = now.getTime();
-        persist();
-        sendAppNotification('Dorongan lembut 🌿', pickRandom(IDLE_NUDGE_MESSAGES), 'pomodoro');
-      }
-    }
-
-    // 3) Deadline mendekat (atau udah lewat)
-    if (r.deadlineEnabled) {
-      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      state.tasks.filter(t => t.status !== 'selesai' && t.due).forEach(t => {
-        const diffDays = Math.round((new Date(t.due + 'T00:00:00') - todayMidnight) / 86400000);
-        if (r.deadlineLeadDays.includes(diffDays)) {
-          const key = `${t.id}:${diffDays}`;
-          if (!rl.deadlineFired.includes(key)) {
-            rl.deadlineFired.push(key);
-            persist();
-            const pool = DEADLINE_MESSAGES[diffDays] || DEADLINE_MESSAGES[0];
-            sendAppNotification('Pengingat tenggat ⏰', fillTemplate(pickRandom(pool), t), 'tugas');
-          }
-        } else if (diffDays < 0 && r.overdueEnabled) {
-          const key = `${t.id}:${todayStr()}`;
-          if (!rl.overdueFired.includes(key)) {
-            rl.overdueFired.push(key);
-            persist();
-            sendAppNotification('Pengingat lembut 🌧️', fillTemplate(pickRandom(OVERDUE_MESSAGES), t), 'tugas');
-          }
-        }
-      });
-    }
-  }
-
-  // ============================================================
-  // PRAISE TOAST — pesan pujian random & general (gak digantungin ke
-  // gender tertentu) tiap berhasil nyelesain tugas.
-  // ============================================================
-  const PRAISE_MESSAGES = [
-    'Satu tugas selesai. Kemajuanmu nyata.',
-    "'{title}' selesai! Kamu berhasil melawan rasa malas untuk memulai, dan itu kemenangan besar.",
-    'Selesai! Sekecil apa pun langkahnya, tetap kemajuan.',
-    'Bagus. Kamu menyelesaikan sesuatu hari ini, dan itu layak dihargai.',
-    "'{title}' sudah dicentang ✓. Otakmu bekerja keras untuk sampai sini; beri dirimu apresiasi dulu.",
-    'Satu beban lepas dari daftar. Nikmati momen ini sebentar.',
-    'Kamu baru saja membuktikan pada dirimu sendiri bahwa kamu bisa.',
-    "'{title}' resmi selesai, dan itu hasil usahamu sendiri.",
-    'Konsistensi kecil seperti ini lama-lama menumpuk menjadi besar.',
-    'Menyelesaikan tugas saat sulit fokus itu tidak mudah, dan kamu tetap melakukannya.',
-  ];
-
-  function showPraiseToast(task) {
-    showToast(fillTemplate(pickRandom(PRAISE_MESSAGES), task), { kind: 'praise', emoji: '🎉' });
-  }
-
-  function showToast(text, opts = {}) {
-    const stack = document.getElementById('toastStack');
-    if (!stack) return;
-    const el = document.createElement('div');
-    el.className = 'toast' + (opts.kind ? ` toast-${opts.kind}` : '');
-    el.innerHTML = `${opts.emoji ? `<span class="toast-emoji">${opts.emoji}</span>` : ''}<span class="toast-text">${escapeHtml(text)}</span>`;
-    stack.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('is-shown'));
-    setTimeout(() => {
-      el.classList.remove('is-shown');
-      setTimeout(() => el.remove(), 250);
-    }, 4200);
   }
 
   boot();
