@@ -3,6 +3,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   // persistence
   loadData: () => ipcRenderer.invoke('data:load'),
+  getVersion: () => ipcRenderer.invoke('app:version'),
+
+  // EdPDF: PDF yang dibuka dari luar (Explorer / "Buka dengan"), cetak, & pengaturan default
+  edpdfReady: () => ipcRenderer.send('edpdf:ready'),
+  onOpenPdfFiles: (cb) => ipcRenderer.on('edpdf:open-files', (_e, files) => cb(files)),
+  printPage: (opts) => ipcRenderer.invoke('edpdf:print', opts),
+  openDefaultAppsSettings: () => ipcRenderer.invoke('app:open-default-apps'),
   saveData: (data) => ipcRenderer.invoke('data:save', data),
 
   // mini pomodoro widget window
@@ -16,7 +23,12 @@ contextBridge.exposeInMainWorld('api', {
   sendTimerControl: (action) => ipcRenderer.send('timer:control', action),
   onTimerControl: (cb) => ipcRenderer.on('timer:control', (_e, action) => cb(action)),
 
-  // native OS notifications (pengingat jam belajar & deadline)
-  showNotification: (payload) => ipcRenderer.send('notify:show', payload),
-  onNotificationClicked: (cb) => ipcRenderer.on('notify:clicked', (_e, goto) => cb(goto)),
+  // Focus Mode "reminder medsos" — soft in-app reminder only, no OS-level access
+  blockSites: (domains) => ipcRenderer.invoke('focus:block', domains),
+  unblockSites: () => ipcRenderer.invoke('focus:unblock'),
+
+  // "Balik fokus" nudge — only looks at this app's own window focus, never
+  // at other programs.
+  setFocusGuard: (active) => ipcRenderer.send('focus-guard:set', active),
+  returnToApp: () => ipcRenderer.send('focus-guard:return'),
 });
