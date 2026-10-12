@@ -1,24 +1,25 @@
 {
   "name": "readlify",
-  "version": "1.0.0",
-  "description": "Asisten kuliah anda.",
+  "version": "1.1.1",
+  "description": "Cozy, Apple-style, ADHD-friendly desktop companion for kuliah — pomodoro, tugas, daftar pustaka, dan EdPDF (pembaca PDF jurnal).",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "pack": "electron-builder --win --dir"
   },
   "author": "@hasansatriah",
   "license": "MIT",
-  "copyright": "Copyright © 2026 @hasansatriah",
   "dependencies": {},
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "electron.app.readlify",
+    "appId": "id.hasan.readlify",
     "productName": "Readlify",
+    "copyright": "Copyright © 2026 Hasan",
     "files": [
       "main.js",
       "preload.js",
@@ -26,7 +27,6 @@
       "build/icon.png"
     ],
     "icon": "build/icon.png",
-    "compression": "normal",
     "win": {
       "target": [
         {
@@ -36,9 +36,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png",
-      "legalTrademarks": "Readlify",
-      "requestedExecutionLevel": "asInvoker"
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -47,8 +45,18 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Readlify",
+      "uninstallDisplayName": "Readlify",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "Readlify-Setup-${version}.${ext}"
-    }
+      "artifactName": "Readlify-Setup-${version}.exe"
+    },
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "Dokumen PDF",
+        "description": "Dokumen PDF",
+        "mimeType": "application/pdf",
+        "role": "Viewer"
+      }
+    ]
   }
 }
