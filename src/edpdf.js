@@ -27,7 +27,7 @@
       const tr = it.transform || [1, 0, 0, 1, 0, 0];
       const size = Math.hypot(tr[0], tr[1]) || it.height || 10;
       const rot = Math.abs(tr[1]) > Math.abs(tr[0]) * 0.5; // teks miring/vertikal (watermark, dll)
-      out.push({ str, x: tr[4], y: tr[5], w: it.width || 0, size, tr, rot });
+      out.push({ str, x: tr[4], y: tr[5], w: it.width || 0, size, tr, rot, fontName: it.fontName });
     }
     return out;
   }
@@ -537,6 +537,7 @@
 
       const tab = Object.assign(blankTab(), { id: bridge.uid(), name: file.name, pdf: pdfDoc, fp, numPages: pdfDoc.numPages });
       tabs.push(tab);
+      if (bridge.ach) bridge.ach('pdf_opened', { id: fp });
       await activateTab(tab);
       showLoading('');
       announce(`PDF dibuka di tab baru, ${tab.numPages} halaman.`);
@@ -679,7 +680,7 @@
           const page = await getPageObj(n, tab);
           const vp = page.getViewport({ scale: 1 });
           const tc = await page.getTextContent();
-          return { page: n, items: core.normalizeItems(tc.items), w: vp.width, h: vp.height };
+          return { page: n, items: core.normalizeItems(tc.items), w: vp.width, h: vp.height, styles: tc.styles || {} };
         })();
       }
       return tab.pageDataP[n];
@@ -799,13 +800,38 @@
         a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5],
       ];
     }
-    function measureWidth(str) { // lebar teks pada font 100px (dibagi proporsional nanti)
+    let measureFam = '';
+    const fontMetricsCache = {};
+    function ensureMeasureCtx() {
       if (measureCtx === null) {
         try { measureCtx = doc0.createElement('canvas').getContext('2d') || false; } catch (e) { measureCtx = false; }
-        if (measureCtx) measureCtx.font = '100px sans-serif';
       }
-      return measureCtx ? measureCtx.measureText(str).width : str.length * 50;
+      return measureCtx;
     }
+    function useFont(fam) {
+      if (!ensureMeasureCtx()) return false;
+      if (measureFam !== fam) { measureCtx.font = `100px ${fam}`; measureFam = fam; }
+      return true;
+    }
+    // lebar teks pada font 100px (dibagi proporsional nanti)
+    function measureWidth(str, fam) {
+      fam = fam || 'sans-serif';
+      return useFont(fam) ? measureCtx.measureText(str).width : str.length * 50;
+    }
+    // Posisi garis dasar di dalam kotak span (line-height 1) buat tiap keluarga font,
+    // dari metrik font beneran, biar kotak seleksi pas dengan huruf di kanvas.
+    function fontInfo(fam) {
+      let m = fontMetricsCache[fam];
+      if (m) return m;
+      let a = 0.8, d = 0.2;
+      if (useFont(fam)) {
+        const t = measureCtx.measureText('Hxg');
+        if (t && t.fontBoundingBoxAscent) { a = t.fontBoundingBoxAscent / 100; d = t.fontBoundingBoxDescent / 100; }
+      }
+      m = fontMetricsCache[fam] = { base: (1 + a - d) / 2 };
+      return m;
+    }
+    const famOf = (data, it) => { const st = data.styles && data.styles[it.fontName]; return (st && st.fontFamily) || 'sans-serif'; };
 
     async function renderPage(n, token) {
       const elp = pageEls[n];
@@ -847,11 +873,13 @@
 
     function buildTextLayer(data, vp) {
       const layer = mk('div', 'edpdf-textlayer');
+      const PAD_TOP = 0.12, PAD_BOT = 0.16; // kotak span sedikit lebih tinggi biar nggak ada celah mati antar-baris
       data.items.forEach((it, idx) => {
         const tr = matrixMul(vp.transform, it.tr);
         const fontH = Math.hypot(tr[2], tr[3]);
         if (!fontH) return;
         const angle = Math.atan2(tr[1], tr[0]);
+        const fam = famOf(data, it);
         // Span-nya absolut (nggak ada spasi/baris baru alami), jadi tambahin pemisah
         // sendiri biar teks yang diblok & disalin tetep ada spasinya.
         let suffix = '';
@@ -862,15 +890,28 @@
           else suffix = '\n';
         }
         const sp = mk('span', null, it.str + suffix);
+        sp.style.fontFamily = fam;
         sp.style.left = tr[4].toFixed(2) + 'px';
-        sp.style.top = (tr[5] - fontH * 0.82).toFixed(2) + 'px';
+        sp.style.top = (tr[5] - fontH * (fontInfo(fam).base + PAD_TOP)).toFixed(2) + 'px';
         sp.style.fontSize = fontH.toFixed(2) + 'px';
+        sp.style.padding = `${PAD_TOP}em 0 ${PAD_BOT}em`;
+        // Samakan lebar dengan teks asli: kalau barisnya rata kanan-kiri (spasi melebar) selisihnya
+        // dibagi ke spasi, sisanya baru diskalakan. Posisi huruf jadi jauh lebih pas buat diseleksi.
         const target = it.w * vp.scale;
-        const natural = measureWidth(it.str) * fontH / 100;
-        const sx = natural > 0 && target > 0 ? target / natural : 1;
+        const natural = measureWidth(it.str, fam) * fontH / 100;
+        let sx = 1;
+        if (natural > 0 && target > 0) {
+          const nSp = (it.str.match(/ /g) || []).length;
+          if (target > natural * 1.02 && nSp > 0) {
+            const ws = Math.min((target - natural) / nSp, fontH * 1.5);
+            sp.style.wordSpacing = ws.toFixed(2) + 'px';
+            sx = target / (natural + ws * nSp);
+          } else sx = target / natural;
+        }
         sp.style.transform = (angle ? `rotate(${angle}rad) ` : '') + `scaleX(${sx.toFixed(4)})`;
         layer.appendChild(sp);
       });
+      layer.appendChild(mk('div', 'endOfContent'));
       return layer;
     }
 
@@ -901,13 +942,14 @@
           if (b <= a || it.rot) continue;
           const tr = matrixMul(vp.transform, it.tr);
           const fontH = Math.hypot(tr[2], tr[3]);
-          const whole = measureWidth(it.str) || 1;
-          const f0 = measureWidth(it.str.slice(0, a - m.start)) / whole;
-          const f1 = measureWidth(it.str.slice(0, b - m.start)) / whole;
+          const fam = famOf(data, it);
+          const whole = measureWidth(it.str, fam) || 1;
+          const f0 = measureWidth(it.str.slice(0, a - m.start), fam) / whole;
+          const f1 = measureWidth(it.str.slice(0, b - m.start), fam) / whole;
           const wpx = it.w * vp.scale;
           const r = mk('div', 'edpdf-hl' + (mi === nthCurrent ? ' is-current' : ''));
           r.style.left = (tr[4] + f0 * wpx).toFixed(1) + 'px';
-          r.style.top = (tr[5] - fontH * 0.85).toFixed(1) + 'px';
+          r.style.top = (tr[5] - fontH * fontInfo(fam).base).toFixed(1) + 'px';
           r.style.width = Math.max(3, (f1 - f0) * wpx).toFixed(1) + 'px';
           r.style.height = (fontH * 1.1).toFixed(1) + 'px';
           r.dataset.m = String(mi);
@@ -1147,7 +1189,9 @@
       const r = s.range.getBoundingClientRect();
       const w = el.wrap.getBoundingClientRect();
       el.selTools.hidden = false;
-      const top = clamp(r.top - w.top - 46, 6, Math.max(6, w.height - 50));
+      // di atas seleksi kalau muat; kalau seleksinya mepet atas, taruh di bawahnya biar nggak nutupin teks
+      const above = r.top - w.top - 46;
+      const top = above >= 6 ? above : clamp(r.bottom - w.top + 10, 6, Math.max(6, w.height - 50));
       const left = clamp(r.left - w.left, 6, Math.max(6, w.width - 330));
       el.selTools.style.top = top + 'px';
       el.selTools.style.left = left + 'px';
@@ -1165,6 +1209,7 @@
         const d = doc();
         const q = { id: bridge.uid(), text: sel.text, page: sel.page, pageEnd: sel.pageEnd, para: '', createdAt: Date.now() };
         d.quotes.push(q); save();
+        if (bridge.ach) bridge.ach('quote_saved', { id: q.id });
         const cite = citeText(q.page, q.pageEnd);
         copy(`“${q.text}” ${cite}`);
         renderQuotes(); switchTab('kutipan'); openPanel();
@@ -1236,6 +1281,7 @@
       const n = { id: bridge.uid(), page: sel ? sel.page : T.curPage, anchor: sel ? sel.text.slice(0, 90) : '', text: '',
         color: NOTE_COLORS[d.notes.length % NOTE_COLORS.length], createdAt: Date.now() };
       d.notes.push(n); save();
+      if (bridge.ach) bridge.ach('note_added', { id: n.id });
       renderNotes(); decorateNotes(); switchTab('catatan'); openPanel();
       el.selTools.hidden = true;
       const ta = el.noteList.querySelector(`[data-id="${n.id}"] textarea`);
@@ -1724,6 +1770,15 @@
     });
 
     // seleksi
+    // Selama drag, area kosong di lapisan teks "ditangkap" endOfContent (nggak bisa diseleksi),
+    // jadi pilihan nggak loncat kemana-mana pas kursor lewat margin/celah. (Trik ala PDF.js)
+    el.reader.addEventListener('mousedown', (e) => {
+      const layer = e.target && e.target.closest ? e.target.closest('.edpdf-textlayer') : null;
+      if (layer) layer.classList.add('selecting');
+    });
+    const endSelecting = () => el.reader.querySelectorAll('.edpdf-textlayer.selecting').forEach((l) => l.classList.remove('selecting'));
+    doc0.addEventListener('mouseup', endSelecting);
+    root.addEventListener('blur', endSelecting);
     el.reader.addEventListener('mouseup', () => setTimeout(showSelTools, 0));
     el.reader.addEventListener('keyup', (e) => { if (e.shiftKey || /Arrow/.test(e.key)) setTimeout(showSelTools, 0); });
     el.selTools.addEventListener('mousedown', (e) => e.preventDefault()); // biar seleksi gak hilang

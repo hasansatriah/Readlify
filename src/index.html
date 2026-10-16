@@ -41,6 +41,10 @@
         <svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M9.5 12h5M9.5 15h5"/></svg>
         <span>EdPDF</span>
       </button>
+      <button class="nav-item" data-view="pencapaian">
+        <svg viewBox="0 0 24 24"><path d="M8 4.5h8v5a4 4 0 0 1-8 0v-5Z"/><path d="M8 6.5H5.5a2 2 0 0 0 2 3.2M16 6.5h2.5a2 2 0 0 1-2 3.2M12 13.5v3.2M9 19.5h6M10 16.7h4"/></svg>
+        <span>Pencapaian</span>
+      </button>
       <button class="nav-item" data-view="catatan">
         <svg viewBox="0 0 24 24"><path d="M6 4.5h9l3.5 3.5V19a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5Z"/><path d="M15 4.5V8h3.5M8.3 12h7M8.3 15h5"/></svg>
         <span>Catatan Cepat</span>
@@ -83,6 +87,18 @@
             <span class="stat-label">Deret harian</span>
             <span class="stat-value" id="statStreak">0</span>
             <span class="stat-foot">hari berturut-turut</span>
+          </div>
+        </div>
+
+        <div class="card ach-home" id="achHomeCard">
+          <div class="ah-main">
+            <span class="ah-level" id="achHomeLevel">Level 1</span>
+            <span class="ah-rank" id="achHomeRank">Mahasiswa Baru</span>
+            <div class="ach-bar" id="achHomeBar" role="progressbar" aria-label="Progres XP ke level berikutnya" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="achHomeFill"></div></div>
+          </div>
+          <div class="ah-side">
+            <span id="achHomeQuests">Misi hari ini: 0/3 kelar</span>
+            <button class="btn-ghost" id="achHomeBtn" type="button">Lihat pencapaian →</button>
           </div>
         </div>
 
@@ -141,7 +157,7 @@
       <section class="view" id="view-pomodoro">
         <header class="view-header">
           <h1>Pomodoro &amp; Mode Fokus</h1>
-          <p class="subtitle">Fokus bentar, istirahat secukupnya. Widget-nya bisa dilepas ke luar layar, atau langsung masuk Mode Fokus buat versi layar penuh minim distraksi.</p>
+          <p class="subtitle">Fokus bentar, istirahat secukupnya. Widget-nya bisa dilepas ke luar layar, atau masuk Mode Fokus: layar penuh tanpa gangguan. Keluar dari layar penuh = timer berhenti.</p>
         </header>
 
         <div class="grid grid-2">
@@ -163,7 +179,7 @@
               <button class="btn-ghost" id="btnSkipTimer">Skip</button>
             </div>
 
-            <button class="btn-secondary" id="btnEnterFocusMode">Masuk Mode Fokus 🎯</button>
+            <button class="btn-secondary" id="btnEnterFocusMode">Masuk Mode Fokus (layar penuh) 🎯</button>
             <button class="btn-secondary" id="btnOpenMiniWidget">Buka widget ngambang</button>
           </div>
 
@@ -428,10 +444,66 @@
         <div class="edpdf-toast" id="edpdfToast" hidden role="status"></div>
       </section>
 
+      <!-- ---------- PENCAPAIAN ---------- -->
+      <section class="view" id="view-pencapaian">
+        <header class="view-header">
+          <h1>Pencapaian</h1>
+          <p class="subtitle">Nggak ada garis finis di sini: tiap jalur punya tier berikutnya, level nggak ada batasnya, dan misi baru muncul terus. Santai aja, ini buat seru-seruan.</p>
+        </header>
+
+        <div class="card ach-level">
+          <div class="al-badge"><span class="al-lv" id="achLevelNum">1</span><span class="al-lbl">LEVEL</span></div>
+          <div class="al-info">
+            <h2 id="achRank">Mahasiswa Baru</h2>
+            <div class="ach-bar ach-bar-lg" id="achXpBar" role="progressbar" aria-label="Progres XP ke level berikutnya" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="achXpFill"></div></div>
+            <p class="hint-text" id="achXpText"></p>
+            <ul class="al-stats">
+              <li><span>🔥 Deret hari ini</span><strong id="achStreak">0 hari</strong></li>
+              <li><span>🏅 Rekor deret</span><strong id="achBest">0 hari</strong></li>
+              <li><span>✨ Total XP</span><strong id="achTotalXp">0</strong></li>
+              <li><span>🏆 Tier terbuka</span><strong id="achTierCount">0</strong></li>
+              <li><span>🎯 Misi selesai</span><strong id="achQuestsDone">0</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head"><h2>Misi hari ini 🎯</h2></div>
+            <ul class="ach-quests" id="achDailyList"></ul>
+            <p class="hint-text">Misi baru tiap hari (jam 00.00) dan makin menantang seiring levelmu naik.</p>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Misi minggu ini 🗓️</h2></div>
+            <ul class="ach-quests" id="achWeeklyList"></ul>
+            <p class="hint-text">Berganti tiap Senin. Hadiah XP-nya lebih gede.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Jalur pencapaian ♾️</h2></div>
+          <p class="hint-text">Tiap jalur punya tier tanpa batas. Kelar satu tier, target berikutnya otomatis muncul.</p>
+          <ul class="ach-tracks" id="achTrackGrid"></ul>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-head"><h2>Rahasia 🕵️</h2><span class="hint-text" id="achSecretCount"></span></div>
+            <ul class="ach-secrets" id="achSecretGrid"></ul>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Terbaru ✨</h2></div>
+            <ul class="ach-feed" id="achFeedList"></ul>
+            <p class="empty-hint" id="achFeedEmpty">Belum ada. Selesaiin satu tugas atau satu sesi fokus buat mulai!</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ---------- MODE FOKUS (dijalanin dari dalam Pomodoro & Fokus, timer & datanya sama persis) ---------- -->
       <section class="view" id="view-fokus">
         <div class="focus-wrap">
           <p class="focus-eyebrow">Satu hal dulu, sisanya nanti</p>
+          <p class="focus-mode" id="focusModeLabel">Fokus</p>
           <select id="focusTaskSelect" class="focus-select">
             <option value="">Mau fokus ke tugas apa nih…</option>
           </select>
@@ -452,7 +524,8 @@
             <textarea id="focusBrainDump" rows="3" placeholder="Tulis, terus lupain sejenak…"></textarea>
           </div>
 
-          <button class="btn-ghost" id="btnExitFocus">Balik ke Pomodoro</button>
+          <p class="focus-fs-hint" id="focusFsHint">🖥️ Layar penuh aktif. Keluar dari layar penuh (Esc / F11) bikin timer berhenti.</p>
+          <button class="btn-ghost" id="btnExitFocus">Selesai &amp; keluar layar penuh</button>
         </div>
       </section>
 
@@ -544,6 +617,17 @@
             <div class="card-head"><h2>Data</h2></div>
             <p class="hint-text">Semua data (tugas, daftar pustaka, catatan) disimpan lokal di perangkatmu, bukan di cloud.</p>
             <button class="btn-ghost btn-danger" id="btnResetData">Hapus semua data</button>
+          </div>
+
+          <div class="card" id="achSettingsCard">
+            <div class="card-head"><h2>Pencapaian</h2></div>
+            <div class="field-row">
+              <label class="switch-row">
+                <input type="checkbox" id="cfgAchNotify" checked />
+                <span>🏆 Munculin notifikasi kecil pas dapat pencapaian</span>
+              </label>
+            </div>
+            <p class="hint-text">Kalau dimatiin, XP dan pencapaian tetap kecatat, cuma nggak ada pop-up. Cek di menu Pencapaian kapan aja.</p>
           </div>
 
           <div class="card" id="aboutCard">
@@ -651,6 +735,7 @@
   </div>
 
   <script src="vendor/pdfjs/pdf.min.js"></script>
+  <script src="achievements.js"></script>
   <script src="edpdf.js"></script>
   <script src="renderer.js"></script>
 </body>

@@ -626,3 +626,94 @@ mark.ed-hit.is-current{ background:#FFB84D; outline:2px solid #D9791A; }
   #edpdfPrintArea .pp:last-child{ break-after:auto; page-break-after:auto; }
   #edpdfPrintArea canvas{ display:block; width:100%; height:100%; object-fit:contain; }
 }
+
+/* ---- seleksi teks yang lebih gampang ---- */
+.edpdf-page{ user-select:none; }
+.edpdf-textlayer{ user-select:none; }
+.edpdf-textlayer span{ user-select:text; }
+.edpdf-textlayer .endOfContent{ display:block; position:absolute; left:0; right:0; top:100%; bottom:0; z-index:-1; cursor:default; user-select:none; }
+.edpdf-textlayer.selecting .endOfContent{ top:0; }
+.ed-note-marker, .ed-pagemark, .ed-clean-note, .edpdf-page-badge{ user-select:none; }
+
+/* ===========================================================
+   Mode Fokus layar penuh
+=========================================================== */
+.focus-mode{ margin:-8px 0 0; font-family:var(--font-round); font-size:13px; font-weight:700; letter-spacing:.3px; color:var(--ink-soft); text-transform:uppercase; }
+.focus-fs-hint{ margin:0; font-size:12px; color:var(--ink-soft); max-width:420px; line-height:1.5; }
+.shell.is-focus-full{ padding-top:0; }
+.shell.is-focus-full .sidebar{ display:none; }
+.shell.is-focus-full .content{ padding:0; }
+.shell.is-focus-full #view-fokus.view.is-active{ height:100vh; width:100%; }
+.shell.is-focus-full .focus-wrap{ width:min(680px, 92vw); gap:20px; }
+.shell.is-focus-full .focus-timer .timer-time{ font-size: clamp(76px, 15vw, 168px); line-height:1; }
+.shell.is-focus-full .focus-eyebrow{ font-size:15px; }
+.shell.is-focus-full .focus-mode{ font-size:15px; }
+
+/* ===========================================================
+   Pencapaian (tanpa batas)
+=========================================================== */
+.ach-bar{ height:8px; border-radius:99px; background:var(--paper-dim); overflow:hidden; border:1px solid var(--line); }
+.ach-bar > div{ height:100%; width:0; border-radius:99px; background: linear-gradient(90deg, var(--sage), var(--honey)); transition: width .35s ease; }
+.ach-bar-lg{ height:12px; }
+
+.ach-level{ display:flex; gap:22px; align-items:center; margin-bottom:16px; }
+.al-badge{
+  flex-shrink:0; width:104px; height:104px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 30% 25%, var(--honey-tint), var(--sage-tint)); border:3px solid var(--sage);
+  box-shadow: var(--shadow-soft);
+}
+.al-lv{ font-family:var(--font-round); font-size:38px; font-weight:800; line-height:1; color:var(--ink); }
+.al-lbl{ font-size:10.5px; font-weight:800; letter-spacing:1.4px; color:var(--sage-dark); }
+.al-info{ flex:1; min-width:0; }
+.al-info h2{ margin:0 0 8px; font-family:var(--font-round); font-size:20px; }
+.al-stats{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:8px 22px; }
+.al-stats li{ display:flex; flex-direction:column; font-size:11.5px; color:var(--ink-soft); }
+.al-stats strong{ font-size:15px; color:var(--ink); }
+
+.ach-quests{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.ach-quest{ display:flex; gap:10px; align-items:flex-start; }
+.ach-quest .qi{ font-size:20px; line-height:1.3; }
+.ach-quest .qb{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.ach-quest .qh{ display:flex; justify-content:space-between; gap:10px; font-size:13px; font-weight:650; }
+.ach-quest .qx{ flex-shrink:0; font-size:12px; color:var(--sage-dark); font-weight:700; }
+.ach-quest .qn{ font-size:11.5px; color:var(--ink-soft); }
+.ach-quest.is-done .qt{ text-decoration:line-through; color:var(--ink-soft); }
+
+.ach-tracks{ list-style:none; margin:12px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:12px; }
+.ach-track{ display:flex; gap:12px; padding:12px 14px; border-radius:14px; background:var(--paper-dim); border:1px solid var(--line); border-left:5px solid var(--tc, var(--sage)); }
+.ach-track.tier-c0{ --tc:#9AA8A0; } .ach-track.tier-c1{ --tc:#7C9473; } .ach-track.tier-c2{ --tc:#5B8FB9; }
+.ach-track.tier-c3{ --tc:#B07CC6; } .ach-track.tier-c4{ --tc:#E0A33A; } .ach-track.tier-c5{ --tc:#D9644A; }
+.ach-ico{ font-size:26px; line-height:1.2; }
+.ach-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.ach-title{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; font-size:13.5px; }
+.ach-badge{ font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; background:var(--tc, var(--sage)); color:#fff; }
+.ach-next{ font-size:11.5px; line-height:1.5; color:var(--ink-soft); }
+
+.ach-secrets, .ach-feed{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.ach-secret{ display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:12px; border:1px dashed var(--line); opacity:.85; }
+.ach-secret.is-open{ border-style:solid; border-color:var(--honey); background:var(--honey-tint); opacity:1; }
+.ach-secret .si{ font-size:20px; }
+.ach-secret .sb{ display:flex; flex-direction:column; font-size:12.5px; }
+.ach-secret .sh{ font-size:11.5px; color:var(--ink-soft); }
+.ach-feed li{ display:flex; gap:10px; font-size:12.5px; line-height:1.5; }
+.ach-feed .fw{ flex-shrink:0; width:92px; color:var(--ink-soft); font-size:11.5px; }
+
+/* kartu ringkas di Beranda */
+.ach-home{ display:flex; align-items:center; justify-content:space-between; gap:22px; margin-bottom:16px; flex-wrap:wrap; }
+.ah-main{ flex:1; min-width:240px; display:flex; flex-direction:column; gap:6px; }
+.ah-level{ font-family:var(--font-round); font-size:20px; font-weight:800; }
+.ah-rank{ font-size:12.5px; color:var(--ink-soft); }
+.ah-side{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:13px; }
+
+/* notifikasi kecil */
+.app-toast{
+  position:fixed; right:22px; bottom:22px; z-index:90; max-width:min(420px, 86vw); padding:12px 16px; border-radius:14px;
+  background:#3A3530; color:#F7F1E7; box-shadow:0 10px 28px rgba(0,0,0,.32); font-size:13px; line-height:1.5;
+  opacity:0; transform:translateY(12px); pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+}
+.app-toast p{ margin:0; } .app-toast p + p{ margin-top:4px; }
+.app-toast.is-show{ opacity:1; transform:none; pointer-events:auto; }
+.app-toast.is-click{ cursor:pointer; }
+@media (prefers-reduced-motion: reduce){ .app-toast, .ach-bar > div{ transition:none; } }
+.shell.is-focus-full .focus-notes{ width:100%; }
+.shell.is-focus-full .focus-notes textarea{ width:100%; box-sizing:border-box; }

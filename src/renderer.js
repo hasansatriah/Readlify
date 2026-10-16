@@ -10,6 +10,7 @@
     tasks: [],
     citations: [],
     citationStyle: 'apa7',
+    ach: null,
     notes: [],
     mood: { date: '', value: '' },
     pomodoro: {
@@ -85,6 +86,7 @@
     initPomodoro();
     initCitations();
     initEdPdf();
+    initAchievements();
     initFocus();
     initNotes();
     initSettings();
@@ -139,7 +141,67 @@
     });
   }
 
+  // ------------------------------------------------------------
+  // MODE FOKUS = LAYAR PENUH. Keluar dari layar penuh (Esc / F11 / tombol) -> timer berhenti (dijeda).
+  // ------------------------------------------------------------
+  let focusFullscreen = false;
+  const isFocusViewActive = () => document.getElementById('view-fokus').classList.contains('is-active');
+  function setShellFocusFull(on) {
+    const sh = document.querySelector('.shell');
+    if (sh) sh.classList.toggle('is-focus-full', !!on);
+  }
+  async function enterFocusMode(taskId) {
+    if (taskId) {
+      timer.linkedTaskId = taskId;
+      const cfg = document.getElementById('cfgLinkedTask'); if (cfg) cfg.value = taskId;
+    }
+    document.getElementById('focusTaskSelect').value = timer.linkedTaskId || '';
+    goToView('fokus');
+    if (window.api.setFullScreen) {
+      try { await window.api.setFullScreen(true); } catch (e) { /* tetap lanjut tanpa layar penuh */ }
+    } else {
+      onFullScreenChange(true);
+    }
+  }
+  function onFullScreenChange(isFull) {
+    focusFullscreen = !!isFull;
+    setShellFocusFull(focusFullscreen && isFocusViewActive());
+    // keluar dari layar penuh pas lagi di Mode Fokus -> balik ke Pomodoro (goToView yang jeda timernya)
+    if (!focusFullscreen && isFocusViewActive()) goToView('pomodoro');
+  }
+  function requestExitFocus() {
+    if (focusFullscreen && window.api.setFullScreen) window.api.setFullScreen(false); // event layar penuh yang lanjutin
+    else goToView('pomodoro');
+  }
+
+  // Toast kecil buat info singkat (dipakai pencapaian & Mode Fokus)
+  let appToastTimer = null;
+  function appToast(lines, onClick) {
+    let t = document.getElementById('appToast');
+    if (!t) {
+      t = document.createElement('div'); t.id = 'appToast'; t.className = 'app-toast';
+      t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+      document.body.appendChild(t);
+    }
+    const arr = Array.isArray(lines) ? lines : [lines];
+    t.textContent = '';
+    arr.forEach((ln) => { const p = document.createElement('p'); p.textContent = ln; t.appendChild(p); });
+    t.classList.toggle('is-click', !!onClick);
+    t.onclick = onClick ? () => { t.classList.remove('is-show'); onClick(); } : null;
+    t.classList.add('is-show');
+    clearTimeout(appToastTimer);
+    appToastTimer = setTimeout(() => t.classList.remove('is-show'), 5200);
+  }
+
   function goToView(name) {
+    if (name !== 'fokus' && isFocusViewActive()) {
+      const wasRunning = timer.running;
+      if (wasRunning) toggleTimer();           // jeda timer
+      stopFocusBlockingIfNeeded();
+      setShellFocusFull(false);
+      if (focusFullscreen && window.api.setFullScreen) { focusFullscreen = false; window.api.setFullScreen(false); }
+      if (wasRunning) appToast('Keluar dari layar penuh, jadi timernya dijeda ⏸️ Lanjut kapan pun kamu siap.');
+    }
     document.querySelectorAll('.nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
   }
@@ -342,9 +404,9 @@
     if (existing) {
       Object.assign(existing, payload);
     } else {
-      state.tasks.push({
-        id: uid(), status: 'belum', createdAt: Date.now(), ...payload,
-      });
+      const newTask = { id: uid(), status: 'belum', createdAt: Date.now(), ...payload };
+      state.tasks.push(newTask);
+      recordAch('task_created', { id: newTask.id });
     }
     persist();
     closeTaskModal();
@@ -417,6 +479,9 @@
     card.querySelector('.task-check').addEventListener('click', () => {
       t.status = t.status === 'selesai' ? 'berjalan' : 'selesai';
       persist(); renderTasks(); renderHome();
+      if (t.status === 'selesai') {
+        recordAch('task_done', { id: t.id, ageMs: Date.now() - (t.createdAt || 0), subtasks: t.subtasks.length, subDone: t.subtasks.filter(x => x.done).length });
+      }
     });
     card.querySelectorAll('[data-act]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -425,7 +490,7 @@
         if (act === 'edit') openTaskModal(t);
         if (act === 'pecah') openTaskModal(t, true);
         if (act === 'hapus') { state.tasks = state.tasks.filter(x => x.id !== t.id); persist(); renderTasks(); renderHome(); renderFocusTaskOptions(); }
-        if (act === 'fokus') { goToView('fokus'); document.getElementById('focusTaskSelect').value = t.id; }
+        if (act === 'fokus') enterFocusMode(t.id);
         if (act === 'toggle-subtasks') {
           if (expandedTaskIds.has(t.id)) expandedTaskIds.delete(t.id); else expandedTaskIds.add(t.id);
           renderTasks();
@@ -439,6 +504,7 @@
         sub.done = cb.checked;
         persist();
         renderTasks();
+        if (sub.done) recordAch('subtask_done', { id: sub.id });
       });
     });
 
@@ -478,12 +544,7 @@
     document.getElementById('btnResetTimer').addEventListener('click', () => resetTimerToMode(timer.mode));
     document.getElementById('btnSkipTimer').addEventListener('click', skipTimer);
     document.getElementById('btnOpenMiniWidget').addEventListener('click', () => window.api.openMiniTimer());
-    document.getElementById('btnEnterFocusMode').addEventListener('click', () => {
-      // Mode Fokus is just this same timer shown full-and-centered — keep
-      // whichever task is already linked so nothing resets.
-      document.getElementById('focusTaskSelect').value = timer.linkedTaskId || '';
-      goToView('fokus');
-    });
+    document.getElementById('btnEnterFocusMode').addEventListener('click', () => enterFocusMode());
 
     window.api.onTimerControl((action) => {
       if (action === 'toggle') toggleTimer();
@@ -653,6 +714,7 @@
       timer.cycleCount += 1;
       persist();
       renderHome(); renderPomodoroPanel();
+      recordAch('session_done', { seconds: state.pomodoro.workSec, hour: new Date().getHours(), fullscreen: focusFullscreen && isFocusViewActive() });
       const nextMode = (timer.cycleCount % state.pomodoro.cycles === 0) ? 'long' : 'short';
       resetTimerToMode(nextMode);
       // Sesi fokus abis -> lanjut istirahat otomatis, gak perlu klik Gas lagi.
@@ -691,6 +753,8 @@
     if (timerTimeEl) timerTimeEl.textContent = txt;
     if (timerModeEl) timerModeEl.textContent = MODE_LABELS[timer.mode];
     if (focusTimeEl) focusTimeEl.textContent = txt;
+    const focusModeEl = document.getElementById('focusModeLabel');
+    if (focusModeEl) focusModeEl.textContent = MODE_LABELS[timer.mode];
 
     const ring = document.getElementById('ringProgress');
     if (ring) {
@@ -759,9 +823,10 @@
       resetTimerToMode(timer.mode);
       await stopFocusBlockingIfNeeded();
     });
-    document.getElementById('btnExitFocus').addEventListener('click', async () => {
-      await stopFocusBlockingIfNeeded();
-      goToView('pomodoro');
+    document.getElementById('btnExitFocus').addEventListener('click', requestExitFocus);
+    if (window.api.onFullScreenChange) window.api.onFullScreenChange(onFullScreenChange);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isFocusViewActive()) { e.preventDefault(); requestExitFocus(); }
     });
     document.getElementById('focusTaskSelect').addEventListener('change', (e) => {
       timer.linkedTaskId = e.target.value;
@@ -1195,9 +1260,11 @@
     });
 
     const fields = { authors, year, title, ...extra };
-    state.citations.push({ id: uid(), type, fields, addedAt: Date.now() });
+    const newCite = { id: uid(), type, fields, addedAt: Date.now() };
+    state.citations.push(newCite);
     persist();
     renderCitations();
+    recordAch('citation_added', { id: newCite.id });
 
     document.getElementById('citeAuthors').value = '';
     document.getElementById('citeYear').value = '';
@@ -1253,12 +1320,30 @@
         } else {
           id = uid();
           state.citations.push({ id, type, fields, addedAt: Date.now(), from: 'edpdf' });
+          recordAch('citation_added', { id });
         }
         persist();
         renderCitations();
         return id;
       },
       inText: (id, page) => inTextForCitation(id, page),
+      ach: (type, meta) => recordAch(type, meta),
+    });
+  }
+
+  // ============================================================
+  // PENCAPAIAN (achievements.js) — dicatat lewat recordAch, aman kalau modulnya belum ada
+  // ============================================================
+  function recordAch(type, meta) {
+    try { if (window.Achievements) window.Achievements.record(type, meta || {}); } catch (e) { /* jangan sampai ganggu fitur utama */ }
+  }
+  function initAchievements() {
+    if (!window.Achievements) return;
+    window.Achievements.init({
+      getState: () => state,
+      persist,
+      goToView,
+      toast: appToast,
     });
   }
 
@@ -1284,8 +1369,10 @@
     const input = document.getElementById('noteInput');
     const text = input.value.trim();
     if (!text) return;
-    state.notes.unshift({ id: uid(), text, createdAt: Date.now() });
+    const newNote = { id: uid(), text, createdAt: Date.now() };
+    state.notes.unshift(newNote);
     persist();
+    recordAch('note_added', { id: 'qn_' + newNote.id });
     input.value = '';
     renderNotes();
   }

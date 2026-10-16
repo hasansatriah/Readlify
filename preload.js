@@ -5,6 +5,10 @@ contextBridge.exposeInMainWorld('api', {
   loadData: () => ipcRenderer.invoke('data:load'),
   getVersion: () => ipcRenderer.invoke('app:version'),
 
+  // Mode Fokus layar penuh
+  setFullScreen: (on) => ipcRenderer.invoke('window:set-fullscreen', on),
+  onFullScreenChange: (cb) => ipcRenderer.on('window:fullscreen-changed', (_e, v) => cb(v)),
+
   // EdPDF: PDF yang dibuka dari luar (Explorer / "Buka dengan"), cetak, & pengaturan default
   edpdfReady: () => ipcRenderer.send('edpdf:ready'),
   onOpenPdfFiles: (cb) => ipcRenderer.on('edpdf:open-files', (_e, files) => cb(files)),

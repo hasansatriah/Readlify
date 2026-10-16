@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/33330055/README.md)
 # Readlify 📖
 
 *Readlify* — gabungan "read" dan "-ify" — aplikasi desktop (Electron) yang
@@ -32,11 +31,14 @@ ADHD.
   buat menyalin kutipan dalam-teksnya.
 - **EdPDF** — pembaca PDF buat baca jurnal, 100% lokal (lihat bagian EdPDF
   di bawah).
-- **Mode Fokus** — sekarang jadi satu paket sama Pomodoro (bukan menu
-  terpisah lagi): layar penuh, minim distraksi, satu tugas dalam satu waktu,
-  kolom "buang pikiran" buat hal-hal yang muncul tiba-tiba, dan opsional
-  **reminder jauhin medsos** selama sesi berjalan (lihat bagian khusus di
-  bawah).
+- **Mode Fokus (layar penuh)** — bagian dari menu Pomodoro & Fokus. Tombol **Masuk Mode
+  Fokus** (atau **Fokusin** di kartu tugas) membuat jendela jadi **layar penuh**: menu
+  samping hilang, timer raksasa di tengah, satu tugas dalam satu waktu, plus kolom
+  "buang pikiran". **Keluar dari layar penuh — lewat tombol, Esc, atau F11 — bikin timer
+  berhenti (dijeda)** dan kamu dibawa balik ke Pomodoro; sisa waktunya tetap ada, jadi
+  bisa dilanjut. Opsional ada **reminder jauhin medsos** (lihat bagian di bawah).
+- **Pencapaian (tanpa garis finis)** — menu **Pencapaian** berisi level, jalur, misi, dan
+  rahasia (lihat bagian khusus di bawah).
 - **Catatan Cepat** — brain-dump kilat, tanpa struktur, tanpa tekanan.
 - **Panduan Format** — ringkasan cepat aturan pengetikan & sitasi dari
   pedoman skripsi (font, margin, spasi, cara mengutip >3 penulis, dsb.),
@@ -78,6 +80,28 @@ nggak kejadian lagi, fitur ini sekarang murni **reminder di dalam
 aplikasi** — nggak minta izin tambahan apa pun, nggak menyentuh pengaturan
 sistem sama sekali. Disiplinnya balik lagi ke komitmen kamu sendiri, bukan
 dipaksa teknis.
+
+## Pencapaian — didesain tanpa garis finis
+
+Menu **Pencapaian** dibuat supaya nggak ada momen "udah tamat, ngapain lagi":
+
+- **Jalur dengan tier tanpa batas** — 11 jalur (Penakluk Tugas, Pemecah Masalah, Pejuang
+  Fokus, Maraton Waktu, Penjaga Layar Penuh, Api Konsisten, Setia Hadir, Kolektor Pustaka,
+  Kutu Buku Jurnal, Pengutip Handal, Pencatat Setia). Ambang tier mengikuti deret
+  1 → 2 → 5 → 10 → 20 → 50 → 100 → … (dikali skala tiap jalur) tanpa ujung. Nama tier
+  berputar (Pemula, Rajin, Tekun, … Abadi) lalu lanjut dengan angka romawi
+  (Pemula II, Rajin II, …). Target berikutnya selalu kelihatan di tiap jalur.
+- **Level & XP tanpa batas** — XP datang dari aksi kecil, tier baru, misi, dan rahasia.
+  Kebutuhan XP naik pelan-pelan, pangkat berganti tiap 5 level (Mahasiswa Baru → … →
+  Legenda Kampus → Legenda Abadi ✦1, ✦2, dst.).
+- **Misi harian & mingguan** — 3 misi harian dan 2 misi mingguan, diacak otomatis tiap
+  hari / tiap Senin dan targetnya makin menantang seiring level naik.
+- **9 pencapaian rahasia** — kejutan seperti Burung Hantu, Si Subuh, Speedrun,
+  Perfeksionis, Comeback!, dan lainnya. Petunjuknya ada, namanya baru terbuka kalau tercapai.
+- **Anti-curang** — tugas, langkah, sumber, jurnal, kutipan, dan catatan cuma dihitung
+  sekali per item, jadi centang-lepas-centang nggak nambah XP.
+- Notifikasi kecil saat dapat pencapaian bisa dimatikan di **Pengaturan → Pencapaian**.
+  Semua data tersimpan lokal bareng data aplikasi lainnya.
 
 ## EdPDF — pembaca PDF buat jurnal
 
@@ -170,6 +194,7 @@ readlify/
     ├── styles.css   # desain: warna, tipografi, tata letak
     ├── renderer.js  # logika aplikasi (state, tugas, timer, daftar pustaka, dst.)
     ├── edpdf.js     # EdPDF: pembaca PDF, tampilan bersih, bionic, cari, kutip
+    ├── achievements.js # Pencapaian: level, jalur tak terbatas, misi harian/mingguan, rahasia
     └── vendor/pdfjs # PDF.js (Mozilla, lisensi Apache-2.0) — dibundel lokal
 ```
 

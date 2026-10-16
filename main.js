@@ -128,6 +128,9 @@ function createMainWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
   mainWindow.webContents.on('did-start-loading', () => { rendererReady = false; });
+  // Mode Fokus = layar penuh. Renderer perlu tahu kapan layar penuh nyala/mati (termasuk lewat F11 / Esc).
+  mainWindow.on('enter-full-screen', () => mainWindow && mainWindow.webContents.send('window:fullscreen-changed', true));
+  mainWindow.on('leave-full-screen', () => mainWindow && mainWindow.webContents.send('window:fullscreen-changed', false));
   mainWindow.on('closed', () => {
     rendererReady = false;
     mainWindow = null;
@@ -254,6 +257,12 @@ ipcMain.on('timer:control', (_evt, action) => {
 });
 
 ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('window:set-fullscreen', (evt, on) => {
+  const w = BrowserWindow.fromWebContents(evt.sender);
+  if (!w) return false;
+  w.setFullScreen(!!on);
+  return w.isFullScreen();
+});
 ipcMain.on('edpdf:ready', () => { rendererReady = true; flushPdfs(); });
 // Cetak: tampilkan dialog cetak sistem (pilih printer / "Microsoft Print to PDF", jumlah salinan, dll).
 ipcMain.handle('edpdf:print', (evt, opts) => new Promise((resolve) => {

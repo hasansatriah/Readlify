@@ -1,6 +1,6 @@
 {
   "name": "readlify",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Cozy, Apple-style, ADHD-friendly desktop companion for kuliah — pomodoro, tugas, daftar pustaka, dan EdPDF (pembaca PDF jurnal).",
   "main": "main.js",
   "scripts": {
