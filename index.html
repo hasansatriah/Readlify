@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="id" data-theme="cozy-light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Readlify — Aplikasi Kuliah: Tugas, Baca Jurnal & Daftar Pustaka</title>
+<meta name="description" content="Aplikasi gratis buat mahasiswa: pecah tugas kuliah, baca jurnal PDF, daftar pustaka APA 7, dan timer fokus. Ramah untuk semua, termasuk ADHD. Windows & Android.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="author" content="@hasansatriah">
+<meta name="application-name" content="Readlify">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F7F1E7">
+<link rel="canonical" href="https://hasansatriah.github.io/readlify/">
+<meta property="og:site_name" content="Readlify">
+<meta property="og:locale" content="id_ID">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hasansatriah.github.io/readlify/">
+<meta property="og:title" content="Readlify — Aplikasi Kuliah untuk Kelola Tugas, Baca Jurnal & Fokus">
+<meta property="og:description" content="Pecah tugas kuliah jadi langkah kecil, baca jurnal tanpa pusing, bikin daftar pustaka, dan fokus. Ramah untuk semua mahasiswa, termasuk ADHD. Gratis.">
+<meta property="og:image" content="https://hasansatriah.github.io/readlify/img/og-readlify.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Readlify: tampilan Pomodoro & Mode Fokus">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Readlify — Aplikasi Kuliah untuk Kelola Tugas, Baca Jurnal & Fokus">
+<meta name="twitter:description" content="Pecah tugas kuliah jadi langkah kecil, baca jurnal tanpa pusing, bikin daftar pustaka, dan fokus. Ramah untuk semua mahasiswa, termasuk ADHD. Gratis.">
+<meta name="twitter:image" content="https://hasansatriah.github.io/readlify/img/og-readlify.jpg">
+<link rel="apple-touch-icon" href="favicon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preload" href="fonts/nunito-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+
+<!-- Tema ditentukan sebelum render supaya nggak kedip: terang 06.00–18.00, gelap 18.00–06.00 -->
+<script>
+(function () {
+  var h = new Date().getHours();
+  var m = /[?&]jam=(\d{1,2})/.exec(location.search);
+  if (m) h = Math.min(23, +m[1]);
+  document.documentElement.setAttribute('data-theme', (h >= 6 && h < 18) ? 'cozy-light' : 'cozy-dark');
+})();
+</script>
+
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebSite",
+   "@id": "https://hasansatriah.github.io/readlify/#situs",
+   "url": "https://hasansatriah.github.io/readlify/",
+   "name": "Readlify",
+   "inLanguage": "id",
+   "publisher": {
+    "@id": "https://hasansatriah.github.io/readlify/#pembuat"
+   }
+  },
+  {
+   "@type": "WebPage",
+   "@id": "https://hasansatriah.github.io/readlify/#halaman",
+   "url": "https://hasansatriah.github.io/readlify/",
+   "name": "Readlify — Aplikasi Kuliah: Tugas, Baca Jurnal & Daftar Pustaka",
+   "isPartOf": {
+    "@id": "https://hasansatriah.github.io/readlify/#situs"
+   },
+   "primaryImageOfPage": "https://hasansatriah.github.io/readlify/img/og-readlify.jpg",
+   "inLanguage": "id"
+  },
+  {
+   "@type": "Person",
+   "@id": "https://hasansatriah.github.io/readlify/#pembuat",
+   "name": "@hasansatriah",
+   "url": "https://github.com/hasansatriah",
+   "sameAs": [
+    "https://github.com/hasansatriah",
+    "https://www.instagram.com/hasansatriah",
+    "https://www.linkedin.com/in/hasan-satria-hanif/"
+   ]
+  },
+  {
+   "@type": "SoftwareApplication",
+   "@id": "https://hasansatriah.github.io/readlify/#windows",
+   "name": "Readlify",
+   "applicationCategory": "EducationalApplication",
+   "applicationSubCategory": "Aplikasi kuliah: manajer tugas, pembaca dokumen, dan daftar pustaka",
+   "operatingSystem": "Windows",
+   "inLanguage": "id",
+   "audience": {
+    "@type": "EducationalAudience",
+    "educationalRole": "student"
+   },
+   "description": "Versi Windows Readlify: aplikasi pendamping kuliah yang cozy dan ramah untuk semua mahasiswa, termasuk ADHD. Tugas langkah kecil, Pomodoro, Mode Fokus, pembaca jurnal EdDOC, daftar pustaka, dan Village.",
+   "image": "https://hasansatriah.github.io/readlify/img/og-readlify.jpg",
+   "downloadUrl": "https://github.com/hasansatriah/Readlify-Windows/releases",
+   "installUrl": "https://github.com/hasansatriah/Readlify-Windows/releases",
+   "license": "https://opensource.org/licenses/MIT",
+   "isAccessibleForFree": true,
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "IDR"
+   },
+   "author": {
+    "@id": "https://hasansatriah.github.io/readlify/#pembuat"
+   },
+   "url": "https://hasansatriah.github.io/readlify/"
+  },
+  {
+   "@type": "SoftwareApplication",
+   "@id": "https://hasansatriah.github.io/readlify/#android",
+   "name": "Readlify",
+   "applicationCategory": "EducationalApplication",
+   "applicationSubCategory": "Aplikasi kuliah: manajer tugas, pembaca dokumen, dan daftar pustaka",
+   "operatingSystem": "Android 7.0+",
+   "inLanguage": "id",
+   "audience": {
+    "@type": "EducationalAudience",
+    "educationalRole": "student"
+   },
+   "description": "Versi Android Readlify untuk HP dan tablet mahasiswa: tugas langkah kecil, Pomodoro yang jalan saat layar mati, Mode Fokus, pembaca jurnal EdDOC, daftar pustaka, dan Village.",
+   "image": "https://hasansatriah.github.io/readlify/img/og-readlify.jpg",
+   "downloadUrl": "https://github.com/hasansatriah/Readlify-Android/releases",
+   "installUrl": "https://github.com/hasansatriah/Readlify-Android/releases",
+   "license": "https://opensource.org/licenses/MIT",
+   "isAccessibleForFree": true,
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "IDR"
+   },
+   "author": {
+    "@id": "https://hasansatriah.github.io/readlify/#pembuat"
+   },
+   "url": "https://hasansatriah.github.io/readlify/"
+  },
+  {
+   "@type": "FAQPage",
+   "@id": "https://hasansatriah.github.io/readlify/#faq",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "Apa itu Readlify?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Readlify adalah aplikasi pendamping kuliah yang cozy: kelola tugas dengan langkah kecil, timer Pomodoro dan Mode Fokus, baca jurnal dan dokumen lewat EdDOC, bikin daftar pustaka, catat ide cepat, serta Village dan Pencapaian biar belajar terasa seru. Dibuat untuk mahasiswa, dan ramah juga bagi mahasiswa dengan ADHD."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Readlify cocok untuk mahasiswa seperti apa?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Untuk semua mahasiswa. Kamu yang lagi dikejar tugas, skripsi, atau laporan bisa memakainya untuk memecah pekerjaan, membaca jurnal, dan merapikan daftar pustaka. Fiturnya dirancang ramah ADHD, tapi manfaatnya terasa untuk siapa saja yang ingin belajar lebih tenang."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Readlify gratis?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Gratis. Readlify open source berlisensi MIT, tanpa akun, tanpa iklan, dan tanpa pelacak. Kalau terbantu, kamu boleh traktir kopi lewat Sociabuzz, tapi nggak wajib dan semua fitur sama untuk semua orang."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Readlify tersedia di perangkat apa saja?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Ada versi Windows dan versi Android (HP dan tablet, butuh Android 7.0 atau lebih baru). Keduanya diunduh dari halaman Releases di GitHub."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Bagaimana cara memasang Readlify di Android?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Buka halaman Releases Readlify Android di GitHub, unduh berkas .apk terbaru, lalu buka berkasnya di HP. Kalau diminta, izinkan pemasangan dari sumber tersebut."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Apakah data dan dokumen saya diupload ke server?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Tidak. Semua tugas, sitasi, catatan, dan dokumen tersimpan di perangkatmu sendiri. Readlify berjalan tanpa server dan tanpa akun."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Format dokumen apa yang bisa dibuka di EdDOC?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "PDF, Word (.docx dan .doc), ODT, RTF, TXT, Markdown, HTML, serta format teks dan data seperti CSV dan JSON. Kamu bisa mencari kata kunci, mengutip dengan sitasi sekali ketuk, memakai fokus strip, bionic reading, dan tampilan Bersih."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Gaya daftar pustaka apa yang didukung?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "APA 7th (bawaan), MLA 9, Chicago (nama–tahun), IEEE, dan Vancouver. Data sumber disimpan mentah, jadi mengganti gaya langsung mengubah seluruh daftar."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Apakah Readlify membantu mahasiswa dengan ADHD?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Ya, itu salah satu perhatian utamanya, dan fitur yang sama berguna untuk semua orang. Tugas bisa dipecah jadi langkah kecil, ada Mode Fokus satu tugas satu waktu, progres baca dan estimasi sisa waktu, tidak ada popup yang memaksa, pengingat yang lembut, serta pilihan font ramah disleksia."
+     }
+    }
+   ]
+  }
+ ]
+}
+</script>
+<style>
+@font-face{
+  font-family:"Nunito"; font-style:normal; font-weight:200 1000; font-display:swap;
+  src:url("fonts/nunito-latin-wght-normal.woff2") format("woff2");
+}
+
+/* ---- design tokens: sama persis dengan aplikasi ---- */
+:root{
+  --paper:#F7F1E7; --paper-dim:#EFE7D8; --ink:#3A3530; --ink-soft:#6E655C;
+  --sage:#7C9473; --sage-dark:#5F7A56; --sage-text:#5F7A56; --sage-tint:#E4EADE;
+  --clay:#D98C7A; --clay-tint:#F6E3DC; --honey:#E3A857; --honey-tint:#FBEDD3;
+  --line:rgba(58,53,48,.10);
+  --on-sage:#fff;
+  --shadow-soft:0 1px 2px rgba(58,53,48,.06), 0 8px 24px rgba(58,53,48,.06);
+  --shadow-card:0 1px 1px rgba(58,53,48,.04), 0 6px 18px rgba(58,53,48,.07);
+  --shadow-shot:0 2px 4px rgba(58,53,48,.06), 0 24px 60px rgba(58,53,48,.16);
+  --radius-lg:20px; --radius-md:14px; --radius-sm:10px;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Inter",sans-serif;
+  --font-round:"Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  color-scheme:light;
+}
+[data-theme="cozy-dark"]{
+  --paper:#211E1A; --paper-dim:#2A2622; --ink:#F1EAE0; --ink-soft:#B9AFA2;
+  --sage-text:#A9C49F; --sage-tint:#2E3A2A; --clay-tint:#3B2C27; --honey-tint:#3A2F1E;
+  --line:rgba(241,234,224,.09);
+  --on-sage:#1c1a16;
+  --shadow-soft:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  --shadow-card:0 1px 1px rgba(0,0,0,.25), 0 6px 18px rgba(0,0,0,.3);
+  --shadow-shot:0 2px 4px rgba(0,0,0,.35), 0 24px 60px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{
+  margin:0; font-family:var(--font-body); color:var(--ink); background:var(--paper);
+  -webkit-font-smoothing:antialiased; line-height:1.6; font-size:16px;
+  transition:background .5s ease,color .5s ease;
+}
+h1,h2,h3{font-family:var(--font-round); line-height:1.15; margin:0}
+p{margin:0}
+a{color:inherit}
+img{max-width:100%; display:block}
+::selection{background:var(--sage-tint)}
+:focus-visible{outline:3px solid var(--sage); outline-offset:3px; border-radius:8px}
+.wrap{width:min(1120px,100% - 40px); margin-inline:auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- header ---- */
+header.top{
+  position:sticky; top:0; z-index:20;
+  background:color-mix(in srgb,var(--paper) 86%,transparent);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.top .wrap{display:flex; align-items:center; gap:18px; height:64px}
+.brand{display:flex; align-items:center; gap:10px; text-decoration:none; font-family:var(--font-round); font-weight:800; font-size:18px}
+.brand img{width:32px; height:32px; border-radius:9px}
+.top nav{margin-left:auto; display:flex; gap:4px; align-items:center}
+.top nav a{
+  text-decoration:none; font-weight:700; font-size:14.5px; color:var(--ink-soft);
+  padding:8px 14px; border-radius:var(--radius-sm); transition:background .15s,color .15s;
+}
+.top nav a:hover{background:var(--sage-tint); color:var(--sage-text)}
+.top nav a.heart{color:var(--clay)}
+.top nav a.heart:hover{background:var(--clay-tint); color:var(--clay)}
+
+/* ---- tombol ---- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  font:800 16px/1 var(--font-round); text-decoration:none; cursor:pointer;
+  padding:15px 24px; border-radius:var(--radius-md); border:1.5px solid transparent;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn svg{width:20px; height:20px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.btn-primary{background:var(--sage); color:var(--on-sage); box-shadow:var(--shadow-card)}
+.btn-primary:hover{background:var(--sage-dark); color:#fff; transform:translateY(-2px); box-shadow:var(--shadow-soft)}
+[data-theme="cozy-dark"] .btn-primary:hover{background:#8fae85; color:var(--on-sage)}
+.btn-soft{background:var(--paper-dim); color:var(--ink); border-color:var(--line)}
+.btn-soft:hover{background:var(--sage-tint); transform:translateY(-2px)}
+.btn-clay{background:var(--clay); color:#fff; box-shadow:var(--shadow-card)}
+[data-theme="cozy-dark"] .btn-clay{color:#2a1a15}
+.btn-clay:hover{transform:translateY(-2px); box-shadow:var(--shadow-soft); filter:brightness(1.05)}
+.btn-sm{padding:10px 16px; font-size:14px; border-radius:var(--radius-sm)}
+
+/* ---- hero ---- */
+.hero{padding:72px 0 32px; text-align:center; position:relative; overflow:hidden}
+.hero::before{
+  content:""; position:absolute; inset:-20% -10% auto -10%; height:70%; z-index:-1;
+  background:radial-gradient(60% 60% at 50% 0%, var(--sage-tint), transparent 70%);
+  opacity:.9;
+}
+.chip{
+  display:inline-block; background:var(--sage-tint); color:var(--sage-text);
+  font:800 14px var(--font-round); padding:7px 16px; border-radius:99px; margin-bottom:22px;
+}
+.hero h1{font-size:clamp(32px,5.2vw,54px); font-weight:850; max-width:20ch; margin:0 auto 16px; letter-spacing:-.5px}
+.hero .lead{font-size:clamp(16.5px,2vw,19px); color:var(--ink-soft); max-width:56ch; margin:0 auto 30px}
+.cta-row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+.fine{margin-top:16px; font-size:13.5px; color:var(--ink-soft)}
+.shot-wrap{margin:52px auto 0; width:min(980px,100%)}
+
+/* ---- bingkai screenshot ---- */
+.frame{
+  border-radius:16px; overflow:hidden; border:1px solid var(--line);
+  box-shadow:var(--shadow-shot); background:var(--paper-dim);
+}
+.frame img{width:100%; height:auto}
+.themed .dark{display:none}
+[data-theme="cozy-dark"] .themed .dark{display:block}
+[data-theme="cozy-dark"] .themed .light{display:none}
+.phone{
+  width:min(220px,44%); border-radius:30px; padding:7px; background:var(--ink);
+  box-shadow:var(--shadow-shot); flex:0 0 auto;
+}
+[data-theme="cozy-dark"] .phone{background:#3a352f}
+.phone img{border-radius:24px; width:100%; height:auto}
+.phones{display:flex; gap:18px; justify-content:center; align-items:flex-start}
+.phones .phone:nth-child(2){margin-top:34px}
+
+/* ---- section umum ---- */
+section{padding:84px 0}
+.eyebrow{font:800 13px var(--font-round); letter-spacing:1.4px; text-transform:uppercase; color:var(--sage-text); margin-bottom:12px}
+.sec-head{text-align:center; margin-bottom:46px}
+.sec-head h2{font-size:clamp(28px,4.4vw,42px); font-weight:850; max-width:20ch; margin:0 auto 14px}
+.sec-head p{color:var(--ink-soft); max-width:58ch; margin:0 auto; font-size:17px}
+
+/* ---- kartu fitur ---- */
+.grid{display:grid; gap:16px; grid-template-columns:repeat(3,1fr)}
+.card{
+  background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-lg);
+  padding:24px; box-shadow:var(--shadow-card); transition:transform .2s ease, box-shadow .2s ease;
+}
+.card:hover{transform:translateY(-3px); box-shadow:var(--shadow-soft)}
+.card .ico{
+  width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  background:var(--sage-tint); color:var(--sage-text); margin-bottom:16px;
+}
+.card .ico svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.card .ico.clay{background:var(--clay-tint); color:var(--clay)}
+.card .ico.honey{background:var(--honey-tint); color:var(--honey)}
+.card h3{font-size:19px; font-weight:800; margin-bottom:8px}
+.card p{color:var(--ink-soft); font-size:15.5px}
+
+/* ---- baris showcase ---- */
+.alt{background:var(--paper-dim); transition:background .5s ease}
+.row{display:grid; grid-template-columns:1fr 1.15fr; gap:56px; align-items:center}
+.row + .row{margin-top:96px}
+.row.flip .copy{order:2}
+.row .copy h3{font-size:clamp(26px,3.6vw,36px); font-weight:850; margin-bottom:14px}
+.row .copy p{color:var(--ink-soft); font-size:17px; margin-bottom:16px}
+.ticks{list-style:none; padding:0; margin:18px 0 0; display:grid; gap:10px}
+.ticks li{position:relative; padding-left:30px; font-size:15.5px}
+.ticks li::before{
+  content:""; position:absolute; left:0; top:4px; width:19px; height:19px; border-radius:50%;
+  background:var(--sage-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.5l3 3 6-6.5' fill='none' stroke='%237C9473' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* ---- privasi ---- */
+.pills{display:grid; grid-template-columns:repeat(4,1fr); gap:16px}
+.pill{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-lg); padding:22px; text-align:center; box-shadow:var(--shadow-card)}
+.pill b{display:block; font:800 18px var(--font-round); margin:8px 0 4px}
+.pill span{font-size:14.5px; color:var(--ink-soft)}
+.pill .emo{font-size:28px}
+
+/* ---- unduh ---- */
+.dl{display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:860px; margin:0 auto}
+.dl .card{padding:30px; display:flex; flex-direction:column; gap:14px}
+.dl .card:hover{transform:none}
+.dl h3{font-size:24px}
+.dl .meta{font-size:14px; color:var(--ink-soft); margin-top:auto}
+.dl .btn{width:100%}
+.os{width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:var(--sage-tint); color:var(--sage-text)}
+.os svg{width:28px; height:28px; fill:currentColor}
+
+/* ---- donasi ---- */
+.donate{
+  max-width:760px; margin:0 auto; text-align:center; padding:44px 32px;
+  background:var(--clay-tint); border:1px solid var(--line); border-radius:28px;
+}
+.donate h2{font-size:clamp(26px,4vw,36px); font-weight:850; margin-bottom:12px}
+.donate p{color:var(--ink-soft); max-width:52ch; margin:0 auto 26px; font-size:17px}
+[data-theme="cozy-dark"] .donate p{color:#d3c6ba}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--line); padding:44px 0 56px; background:var(--paper-dim); transition:background .5s ease}
+footer .wrap{display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center}
+.socials{display:flex; gap:12px}
+.socials a{
+  width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  background:var(--paper); border:1px solid var(--line); color:var(--ink-soft);
+  box-shadow:var(--shadow-card); transition:transform .15s, color .15s, background .15s;
+}
+.socials a:hover{transform:translateY(-3px); color:var(--sage-text); background:var(--sage-tint)}
+.socials svg{width:22px; height:22px}
+.socials .fill{fill:currentColor} .socials .line{fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+footer small{color:var(--ink-soft); font-size:14px}
+.foot-links{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; font-size:14px; font-weight:700}
+.foot-links a{color:var(--ink-soft); text-decoration:none}
+.foot-links a:hover{color:var(--sage-text)}
+
+/* teks yang berubah sesuai jam: transisi halus */
+[data-t]{transition:opacity .25s ease}
+[data-t].swap{opacity:0}
+
+
+/* ---- FAQ ---- */
+.faq{max-width:760px; margin:0 auto; display:grid; gap:12px}
+.qa{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow-card)}
+.qa summary{cursor:pointer; list-style:none; padding:18px 52px 18px 20px; font:800 17px/1.35 var(--font-round); position:relative}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary::after{content:"+"; position:absolute; right:20px; top:50%; transform:translateY(-50%); font-size:24px; color:var(--sage-text); transition:transform .2s}
+.qa[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+.qa p{padding:0 20px 20px; color:var(--ink-soft); font-size:16px}
+.tagline{font:800 clamp(19px,2.6vw,25px)/1.3 var(--font-round); color:var(--sage-text); max-width:40ch; margin:0 auto 14px; text-wrap:balance}
+
+/* ---- responsif ---- */
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr 1fr}
+  .pills{grid-template-columns:1fr 1fr}
+  .row,.row.flip{grid-template-columns:1fr; gap:30px}
+  .row.flip .copy{order:0}
+  .row + .row{margin-top:72px}
+  .row .copy{text-align:center}
+  .ticks{text-align:left; max-width:440px; margin-inline:auto}
+}
+@media (max-width:640px){
+  section{padding:64px 0}
+  .hero{padding-top:48px}
+  .grid,.dl,.pills{grid-template-columns:1fr}
+  .top nav a:not(.keep){display:none}
+  .btn{width:100%}
+  .cta-row{flex-direction:column; align-items:stretch}
+  .btn-sm{width:auto}
+  .donate{padding:34px 22px}
+}
+
+/* ---- tampilan mobile ---- */
+.only-mob{display:none!important}
+.phones.solo .phone{width:min(260px,66%)}
+@media (max-width:640px){
+  .only-desk{display:none!important}
+  .only-mob{display:flex!important}
+  .wrap{width:min(1120px,100% - 32px)}
+  .top .wrap{height:58px}
+  .brand{font-size:17px} .brand img{width:30px; height:30px}
+  .top nav a{padding:8px 10px; font-size:14px}
+  .hero{padding:36px 0 8px}
+  .chip{margin-bottom:16px; font-size:13px}
+  .hero h1{font-size:29px; line-height:1.18; margin-bottom:12px}
+  .tagline{font-size:18px}
+  .hero .lead{font-size:16px; margin-bottom:22px}
+  .cta-row{gap:10px}
+  .cta-row .cta-and{order:-1; background:var(--sage); color:var(--on-sage); border-color:transparent; box-shadow:var(--shadow-card)}
+  .cta-row .cta-win{background:var(--paper-dim); color:var(--ink); border-color:var(--line); box-shadow:none}
+  .shot-wrap{margin-top:36px}
+  .phones{gap:12px}
+  .phone{width:min(168px,44%); border-radius:24px; padding:5px}
+  .phone img{border-radius:19px}
+  .phones .phone:nth-child(2){margin-top:22px}
+  .phones.solo .phone{width:min(220px,62%)}
+  section{padding:52px 0}
+  .sec-head{margin-bottom:28px}
+  .sec-head h2{font-size:26px}
+  .sec-head p{font-size:15.5px}
+  /* kartu fitur: ikon di kiri, teks di kanan */
+  .grid{gap:12px}
+  .card{padding:18px}
+  .grid .card{display:grid; grid-template-columns:46px 1fr; column-gap:14px; align-items:start}
+  .grid .card .ico{grid-row:1 / span 2; margin-bottom:0}
+  .grid .card h3{font-size:17px; margin-bottom:4px}
+  .grid .card p{font-size:14.5px; line-height:1.55}
+  /* showcase */
+  .row,.row.flip{gap:24px}
+  .row + .row{margin-top:56px}
+  .row .copy h3{font-size:25px}
+  .row .copy p{font-size:15.5px}
+  .ticks li{font-size:14.5px}
+  .ticks{max-width:none}
+  /* pill 2 kolom */
+  .pills{grid-template-columns:1fr 1fr; gap:12px}
+  .pill{padding:16px 12px}
+  .pill .emo{font-size:24px}
+  .pill b{font-size:15.5px}
+  .pill span{font-size:13px; display:block; line-height:1.45}
+  /* unduh: Android duluan di HP */
+  .dl{display:flex; flex-direction:column}
+  .dl .dl-and{order:-1}
+  .dl .card{padding:22px}
+  .dl h3{font-size:21px}
+  .qa summary{font-size:15.5px; padding:16px 48px 16px 16px}
+  .qa p{padding:0 16px 16px; font-size:15px}
+  .donate{border-radius:22px}
+  footer{padding:36px 0 44px}
+}
+@media (max-width:360px){
+  .hero h1{font-size:26px}
+  .pills{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#atas" aria-label="Readlify, ke atas">
+      <img src="logo.svg" alt="" width="32" height="32"> Readlify
+    </a>
+    <nav aria-label="Navigasi utama">
+      <a href="#fitur">Fitur</a>
+      <a href="#privasi">Privasi</a>
+      <a href="#faq">FAQ</a>
+      <a class="keep" href="#unduh">Unduh</a>
+      <a class="heart keep" href="#dukung">Dukung ♥</a>
+    </nav>
+  </div>
+</header>
+
+<main id="atas">
+
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+    <div class="wrap">
+      <div class="chip" data-t="greet">Halo! ✨</div>
+      <h1>Readlify: teman kuliah buat kelola tugas, baca jurnal & fokus belajar</h1>
+      <p class="tagline" data-t="headline">Baca, tulis, dan belajar tanpa overwhelming.</p>
+      <p class="lead" data-t="sub">Readlify bikin urusan tugas, laporan, dan dokumen jadi lebih ringkas. Cozy, gratis, dan ramah untuk semua mahasiswa, termasuk yang ADHD.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary cta-win" href="https://github.com/hasansatriah/Readlify-Windows/releases" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M3 5.5l8-1.1v7H3zM13 4.2l8-1.2v8.4h-8zM3 12.6h8v7l-8-1.1zM13 12.6h8V21l-8-1.2z"/></svg>
+          Install untuk Windows
+        </a>
+        <a class="btn btn-soft cta-and" href="https://github.com/hasansatriah/Readlify-Android/releases" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>
+          Install untuk Android
+        </a>
+      </div>
+      <p class="fine">Gratis, open source, tanpa akun, tanpa iklan. Cocok untuk semua mahasiswa.</p>
+
+      <div class="shot-wrap">
+        <div class="frame themed only-desk">
+          <img class="light" fetchpriority="high" src="img/pomodoro-light.webp" alt="Tampilan Pomodoro & Mode Fokus di Readlify, tema terang" width="1280" height="800">
+          <img class="dark" src="img/pomodoro-dark.webp" alt="Tampilan Pomodoro & Mode Fokus di Readlify, tema gelap" width="1280" height="800">
+        </div>
+        <div class="phones only-mob"><figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-beranda-light.webp" alt="Beranda Readlify di HP, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-beranda-dark.webp" alt="Beranda Readlify di HP, tema gelap" width="450" height="974"></figure><figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-pomodoro-light.webp" alt="Pomodoro dan Mode Fokus di HP, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-pomodoro-dark.webp" alt="Pomodoro dan Mode Fokus di HP, tema gelap" width="450" height="974"></figure></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FITUR RINGKAS ================= -->
+  <section id="fitur">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Apa aja isinya?</div>
+        <h2>Semua yang kamu butuh buat kuliah, dalam satu tempat.</h2>
+        <p>Readlify (gabungan “read” dan “-ify”) dibikin buat mahasiswa: dari tugas harian, bacaan jurnal, sampai skripsi. Dirancang ramah ADHD, jadi nyaman dipakai siapa pun.</p>
+      </div>
+
+      <div class="grid">
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l3 3 5-6"/></svg></div>
+          <h3>Tugas yang dipecah</h3>
+          <p>Papan Belum / Sedang jalan / Kelar. Tiap tugas bisa dipecah jadi langkah kecil, atau tempel banyak baris sekaligus lewat tombol “Pecah”.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5"/></svg></div>
+          <h3>Pomodoro & Mode Fokus</h3>
+          <p>Timer yang durasinya bisa diatur sampai ke detik. Masuk Mode Fokus buat layar penuh, satu tugas satu waktu, plus kolom “buang pikiran”.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6.5 3h7.5l4.5 4.5V20a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h4.5M9 13h6M9 16.5h6"/></svg></div>
+          <h3>EdDOC, baca tanpa pusing</h3>
+          <p>PDF, Word, TXT, dan banyak lagi. Ada pustaka folder, cari kata kunci, fokus strip, bionic reading, dan tampilan Bersih. Semua diproses di perangkatmu.</p>
+        </article>
+        <article class="card">
+          <div class="ico clay"><svg viewBox="0 0 24 24"><path d="M5 4.5h14v16l-3-1.8-2 1.8-2-1.8-2 1.8-2-1.8-3 1.8z"/><path d="M8.5 9h7M8.5 12.5h7"/></svg></div>
+          <h3>Kutip + sitasi sekali ketuk</h3>
+          <p>Blok teks, ketuk, kelar. Sumbernya langsung masuk Daftar Pustaka. Ganti gaya APA 7, MLA 9, Chicago, IEEE, atau Vancouver, seluruh daftar ikut berubah.</p>
+        </article>
+        <article class="card">
+          <div class="ico honey"><svg viewBox="0 0 24 24"><path d="M3 20.5h18M5 20.5V11l7-6 7 6v9.5M10 20.5v-5h4v5"/></svg></div>
+          <h3>Village</h3>
+          <p>Kampung kecil yang tumbuh dari sesi fokusmu: jalan, rumah, sawah, balai desa. Nggak ada yang “mati” kalau kamu gagal, jadi tekanannya rendah.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5a3 3 0 0 1-3 3M12 13v4M8.5 20h7"/></svg></div>
+          <h3>Pencapaian tanpa garis finis</h3>
+          <p>Level, jalur, misi harian & mingguan, dan pencapaian rahasia. Nggak ada momen “udah tamat, ngapain lagi”.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SHOWCASE ================= -->
+  <section class="alt" aria-label="Lihat lebih dekat">
+    <div class="wrap">
+
+      <div class="row">
+        <div class="copy">
+          <div class="eyebrow">Tugas</div>
+          <h3>Tugas gede? Pecah aja, biar gak overwhelming.</h3>
+          <p>Tugas kuliah, kerja sambilan, urusan organisasi, sampai urusan pribadi — semuanya jadi bagian-bagian kecil yang bisa dicentang satu-satu. Beranda ngasih ringkasan tugas aktif, sesi fokus hari ini, dan deret harianmu.</p>
+          <ul class="ticks">
+            <li>Filter Kerja, Belajar, Pribadi, dan Lainnya</li>
+            <li>Tenggat singkat dan penanda “Penting”</li>
+            <li>Vibe check singkat sebelum mulai, rahasia kamu doang</li>
+          </ul>
+        </div>
+        <div class="phones">
+          <figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-beranda-light.webp" alt="Beranda Readlify di HP: tombol mulai fokus, tugas aktif, level, dan to-do hari ini, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-beranda-dark.webp" alt="Beranda Readlify di HP: tombol mulai fokus, tugas aktif, level, dan to-do hari ini, tema gelap" width="450" height="974"></figure>
+          <figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-tugas-light.webp" alt="Tugas dengan langkah-langkah kecil yang bisa dicentang di HP, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-tugas-dark.webp" alt="Tugas dengan langkah-langkah kecil yang bisa dicentang di HP, tema gelap" width="450" height="974"></figure>
+        </div>
+      </div>
+
+      <div class="row flip">
+        <div class="copy">
+          <div class="eyebrow">Pomodoro & Mode Fokus</div>
+          <h3>Fokus bentar, istirahat secukupnya.</h3>
+          <p>Timernya tetap jalan walau layar mati. Masuk Mode Fokus buat layar penuh tanpa gangguan, dan fitur Readlify lain tetap bisa dipakai selama sesi.</p>
+          <ul class="ticks">
+            <li>Widget timer mengambang di Windows, selalu di atas jendela lain</li>
+            <li>Pengingat “Balik fokus, yuk!” kalau kamu pindah aplikasi</li>
+            <li>Di Android: alarm lewat notifikasi dengan 5 pilihan suara</li>
+          </ul>
+        </div>
+        <div class="phones">
+          <figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-pomodoro-light.webp" alt="Pomodoro dan Mode Fokus di HP, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-pomodoro-dark.webp" alt="Pomodoro dan Mode Fokus di HP, tema gelap" width="450" height="974"></figure>
+          <figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-desa-light.webp" alt="Village di HP: kampung isometrik yang tumbuh dari sesi fokus, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-desa-dark.webp" alt="Village di HP: kampung isometrik yang tumbuh dari sesi fokus, tema gelap" width="450" height="974"></figure>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="copy">
+          <div class="eyebrow">Daftar Pustaka</div>
+          <h3>Isi sumber sekali, format bisa ganti-ganti.</h3>
+          <p>Data sumber disimpan mentah, jadi ganti gaya penulisan = seluruh daftar langsung ikut berubah. Ketuk satu entri buat nyalin kutipan dalam-teksnya. Gampang kan.</p>
+          <ul class="ticks">
+            <li>APA 7 (bawaan), MLA 9, Chicago, IEEE, Vancouver</li>
+            <li>Buku, artikel jurnal, prosiding, skripsi/tesis, dan artikel internet</li>
+            <li>Nyambung ke EdDOC: kutipan dari dokumen langsung jadi sumber</li>
+          </ul>
+        </div>
+        <div class="frame themed only-desk">
+          <img class="light" loading="lazy" src="img/sitasi-light.webp" alt="Halaman Daftar Pustaka, tema terang" width="1280" height="800">
+          <img class="dark" loading="lazy" src="img/sitasi-dark.webp" alt="Halaman Daftar Pustaka, tema gelap" width="1280" height="800">
+        </div>
+        <div class="phones solo only-mob"><figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-pustaka-light.webp" alt="Daftar Pustaka di HP, dengan sumber yang sudah ditambahkan, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-pustaka-dark.webp" alt="Daftar Pustaka di HP, dengan sumber yang sudah ditambahkan, tema gelap" width="450" height="974"></figure></div>
+      </div>
+
+      <div class="row flip">
+        <div class="copy">
+          <div class="eyebrow">Village</div>
+          <h3>Kampung kecil yang tumbuh dari fokusmu.</h3>
+          <p>Selesaikan sesi fokus yang utuh, dapat koin, bangun desa. Ada rumah warga, sawah, kebun, warung, balai desa, sampai tempat ibadah enam agama dengan harga yang sama.</p>
+          <ul class="ticks">
+            <li>Endless: wilayah dan dunia bisa terus diperluas</li>
+            <li>Tema gelap otomatis jadi suasana malam</li>
+            <li>Ringan di laptop biasa</li>
+          </ul>
+        </div>
+        <div class="frame themed only-desk">
+          <img class="light" loading="lazy" src="img/desa-light.webp" alt="Village: kampung isometrik, tema terang" width="1280" height="800">
+          <img class="dark" loading="lazy" src="img/desa-dark.webp" alt="Village: kampung isometrik, suasana malam" width="1280" height="800">
+        </div>
+        <div class="phones solo only-mob"><figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-desabangun-light.webp" alt="Village di HP: memilih bangunan dari menu Bangun & hias, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-desabangun-dark.webp" alt="Village di HP: memilih bangunan dari menu Bangun & hias, tema gelap" width="450" height="974"></figure></div>
+      </div>
+
+      <div class="row">
+        <div class="copy">
+          <div class="eyebrow">Pencapaian</div>
+          <h3>Seru-seruan, tanpa garis finis.</h3>
+          <p>Nggak ada yang harus “tamat”. Tiap jalur punya tier berikutnya, level nggak ada batasnya, dan misi baru muncul terus. Santai aja.</p>
+          <ul class="ticks">
+            <li>15 jalur dengan tier tanpa batas</li>
+            <li>3 misi harian dan 2 misi mingguan</li>
+            <li>15 pencapaian rahasia (petunjuknya ada, namanya baru kebuka kalau tercapai)</li>
+          </ul>
+        </div>
+        <div class="frame themed only-desk">
+          <img class="light" loading="lazy" src="img/pencapaian-light.webp" alt="Halaman Pencapaian: level, misi, dan jalur, tema terang" width="1280" height="800">
+          <img class="dark" loading="lazy" src="img/pencapaian-dark.webp" alt="Halaman Pencapaian: level, misi, dan jalur, tema gelap" width="1280" height="800">
+        </div>
+        <div class="phones solo only-mob"><figure class="phone themed" style="margin:0"><img class="light" loading="lazy" src="img/hp-pencapaian-light.webp" alt="Pencapaian di HP: level, misi harian, dan jalur, tema terang" width="450" height="974"><img class="dark" loading="lazy" src="img/hp-pencapaian-dark.webp" alt="Pencapaian di HP: level, misi harian, dan jalur, tema gelap" width="450" height="974"></figure></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= RAMAH ================= -->
+  <section id="ramah">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Ramah buat semua</div>
+        <h2>Dirancang ramah ADHD, nyaman buat semua mahasiswa.</h2>
+        <p>Kalau fokus gampang buyar dan tugas terasa menumpuk, Readlify ngerti. Pilihan desainnya ngebantu mahasiswa ADHD, dan ternyata enak dipakai siapa aja.</p>
+      </div>
+      <div class="pills">
+        <div class="pill"><div class="emo">🧩</div><b>Langkah kecil</b><span>Tugas gede dipecah jadi checklist yang gampang dimulai.</span></div>
+        <div class="pill"><div class="emo">🎯</div><b>Satu tugas, satu waktu</b><span>Mode Fokus layar penuh dengan kolom “buang pikiran”.</span></div>
+        <div class="pill"><div class="emo">🌿</div><b>Tanpa tekanan</b><span>Nggak ada popup yang maksa, pengingatnya lembut dan nggak menghakimi.</span></div>
+        <div class="pill"><div class="emo">👁️</div><b>Nyaman buat mata</b><span>Font ramah disleksia, kontras jelas, dan tema terang atau gelap.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRIVASI ================= -->
+  <section id="privasi" class="alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Data kamu, urusan kamu</div>
+        <h2>Semua tersimpan di perangkatmu sendiri.</h2>
+        <p>Dokumen yang kamu baca nggak diupload ke mana-mana. Readlify berjalan tanpa server.</p>
+      </div>
+      <div class="pills">
+        <div class="pill"><div class="emo">🔒</div><b>100% lokal</b><span>Tugas, sitasi, dan catatan ada di perangkatmu.</span></div>
+        <div class="pill"><div class="emo">🙅</div><b>Tanpa akun</b><span>Buka, langsung pakai.</span></div>
+        <div class="pill"><div class="emo">🕊️</div><b>Tanpa iklan & pelacak</b><span>Nggak ada yang ngintip.</span></div>
+        <div class="pill"><div class="emo">💚</div><b>Open source</b><span>Berlisensi MIT, kodenya terbuka di GitHub.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= UNDUH ================= -->
+  <section id="unduh">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Unduh</div>
+        <h2 data-t="dlTitle">Pilih perangkatmu, terus gas.</h2>
+        <p data-t="dlSub">Satu klik, kamu dibawa ke halaman rilis di GitHub. Ambil berkas terbaru dan pasang.</p>
+      </div>
+      <div class="dl">
+        <article class="card dl-win">
+          <div class="os"><svg viewBox="0 0 24 24"><path d="M3 5.5l8-1.1v7H3zM13 4.2l8-1.2v8.4h-8zM3 12.6h8v7l-8-1.1zM13 12.6h8V21l-8-1.2z"/></svg></div>
+          <h3>Readlify untuk Windows</h3>
+          <p>Aplikasi desktop dengan widget timer mengambang, pustaka dokumen, dan mode layar penuh.</p>
+          <a class="btn btn-primary" href="https://github.com/hasansatriah/Readlify-Windows/releases" target="_blank" rel="noopener">Install untuk Windows</a>
+          <div class="meta">Dari halaman Releases di GitHub</div>
+        </article>
+        <article class="card dl-and">
+          <div class="os"><svg viewBox="0 0 24 24"><path d="M7 9.5h10v8a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 17.5zM8.2 8a4 4 0 0 1 7.6 0zM5 9.5a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0zM17 9.5a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0zM9.5 19h1.3v2.2a.65.65 0 0 1-1.3 0zM13.2 19h1.3v2.2a.65.65 0 0 1-1.3 0z"/></svg></div>
+          <h3>Readlify untuk Android</h3>
+          <p>Buat HP dan tablet. Timer tetap jalan saat layar mati, dan tampilannya menyesuaikan ukuran layar.</p>
+          <a class="btn btn-primary" href="https://github.com/hasansatriah/Readlify-Android/releases" target="_blank" rel="noopener">Install untuk Android</a>
+          <div class="meta">Butuh Android 7.0 atau lebih baru. Ambil berkas .apk, lalu izinkan “pasang dari sumber ini” kalau diminta.</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section id="faq" class="alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Sering ditanyain</div>
+        <h2>Pertanyaan yang biasanya muncul.</h2>
+      </div>
+      <div class="faq">
+        <details class="qa"><summary>Apa itu Readlify?</summary><p>Readlify adalah aplikasi pendamping kuliah yang cozy: kelola tugas dengan langkah kecil, timer Pomodoro dan Mode Fokus, baca jurnal dan dokumen lewat EdDOC, bikin daftar pustaka, catat ide cepat, serta Village dan Pencapaian biar belajar terasa seru. Dibuat untuk mahasiswa, dan ramah juga bagi mahasiswa dengan ADHD.</p></details>
+        <details class="qa"><summary>Readlify cocok untuk mahasiswa seperti apa?</summary><p>Untuk semua mahasiswa. Kamu yang lagi dikejar tugas, skripsi, atau laporan bisa memakainya untuk memecah pekerjaan, membaca jurnal, dan merapikan daftar pustaka. Fiturnya dirancang ramah ADHD, tapi manfaatnya terasa untuk siapa saja yang ingin belajar lebih tenang.</p></details>
+        <details class="qa"><summary>Readlify gratis?</summary><p>Gratis. Readlify open source berlisensi MIT, tanpa akun, tanpa iklan, dan tanpa pelacak. Kalau terbantu, kamu boleh traktir kopi lewat Sociabuzz, tapi nggak wajib dan semua fitur sama untuk semua orang.</p></details>
+        <details class="qa"><summary>Readlify tersedia di perangkat apa saja?</summary><p>Ada versi Windows dan versi Android (HP dan tablet, butuh Android 7.0 atau lebih baru). Keduanya diunduh dari halaman Releases di GitHub.</p></details>
+        <details class="qa"><summary>Bagaimana cara memasang Readlify di Android?</summary><p>Buka halaman Releases Readlify Android di GitHub, unduh berkas .apk terbaru, lalu buka berkasnya di HP. Kalau diminta, izinkan pemasangan dari sumber tersebut.</p></details>
+        <details class="qa"><summary>Apakah data dan dokumen saya diupload ke server?</summary><p>Tidak. Semua tugas, sitasi, catatan, dan dokumen tersimpan di perangkatmu sendiri. Readlify berjalan tanpa server dan tanpa akun.</p></details>
+        <details class="qa"><summary>Format dokumen apa yang bisa dibuka di EdDOC?</summary><p>PDF, Word (.docx dan .doc), ODT, RTF, TXT, Markdown, HTML, serta format teks dan data seperti CSV dan JSON. Kamu bisa mencari kata kunci, mengutip dengan sitasi sekali ketuk, memakai fokus strip, bionic reading, dan tampilan Bersih.</p></details>
+        <details class="qa"><summary>Gaya daftar pustaka apa yang didukung?</summary><p>APA 7th (bawaan), MLA 9, Chicago (nama–tahun), IEEE, dan Vancouver. Data sumber disimpan mentah, jadi mengganti gaya langsung mengubah seluruh daftar.</p></details>
+        <details class="qa"><summary>Apakah Readlify membantu mahasiswa dengan ADHD?</summary><p>Ya, itu salah satu perhatian utamanya, dan fitur yang sama berguna untuk semua orang. Tugas bisa dipecah jadi langkah kecil, ada Mode Fokus satu tugas satu waktu, progres baca dan estimasi sisa waktu, tidak ada popup yang memaksa, pengingat yang lembut, serta pilihan font ramah disleksia.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DONASI ================= -->
+  <section id="dukung">
+    <div class="wrap">
+      <div class="donate">
+        <div class="eyebrow" style="color:var(--clay)">Dukung Readlify</div>
+        <h2>Dukung Readlify dulu? 🌿</h2>
+        <p>Readlify dibikin sendiri sama satu orang, pelan-pelan, di sela-sela kesibukan. Kalau aplikasi ini kerasa ngebantu belajarmu, traktir kopi lewat Sociabuzz bikin dia makin jalan. Nggak wajib kok, semua fitur tetap sama buat semua orang. 🙏</p>
+        <a class="btn btn-clay" href="https://sociabuzz.com/hasansatriah/tribe" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.8a4.3 4.3 0 0 1 7.5 2.7c0 5.4-7.5 10-7.5 10z"/></svg>
+          Traktir kopi lewat Sociabuzz
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="pointer-events:none"><img src="logo.svg" alt="" width="32" height="32"> Readlify</div>
+    <div class="socials">
+      <a href="https://github.com/hasansatriah" target="_blank" rel="noopener" aria-label="GitHub @hasansatriah">
+        <svg class="fill" viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/hasansatriah" target="_blank" rel="noopener" aria-label="Instagram @hasansatriah">
+        <svg class="line" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r=".6" fill="currentColor"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/in/hasan-satria-hanif/" target="_blank" rel="noopener" aria-label="LinkedIn @hasansatriah">
+        <svg class="fill" viewBox="0 0 24 24"><path d="M4.5 9h3.6v11H4.5zM6.3 3.5a2.1 2.1 0 1 1 0 4.2 2.1 2.1 0 0 1 0-4.2zM10 9h3.4v1.5c.5-.9 1.7-1.8 3.5-1.8 3.7 0 4.4 2.4 4.4 5.6V20h-3.6v-5.1c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V20H10z"/></svg>
+      </a>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/hasansatriah/Readlify-Windows" target="_blank" rel="noopener">Kode Windows</a>
+      <a href="https://github.com/hasansatriah/Readlify-Android" target="_blank" rel="noopener">Kode Android</a>
+    </div>
+    <small data-t="foot">Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.</small>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var COPY = {
+    pagi: {
+      greet: 'Met pagi! ☀️',
+      headline: 'Pagi yang pas buat mulai pelan-pelan.',
+      sub: 'Satu langkah kecil dulu, yang lain nyusul. Readlify bantu kamu baca jurnal, nulis, dan ngerjain tugas kuliah tanpa overwhelming.',
+      dlTitle: 'Pagi-pagi gini, siapin Readlify dulu yuk.',
+      dlSub: 'Satu klik, kamu dibawa ke halaman rilis di GitHub. Ambil berkas terbaru, pasang, terus mulai harimu.',
+      foot: 'Semangat hari ini! Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.'
+    },
+    siang: {
+      greet: 'Met siang! 🌤️',
+      headline: 'Siang-siang gini, waktunya gas satu sesi fokus.',
+      sub: 'Tugas kuliah numpuk, jurnal segunung? Pecah jadi bagian kecil, fokus 25 menit, istirahat secukupnya. Readlify yang nemenin.',
+      dlTitle: 'Habis makan siang, install Readlify yuk.',
+      dlSub: 'Satu klik, kamu dibawa ke halaman rilis di GitHub. Ambil berkas terbaru dan pasang.',
+      foot: 'Jangan lupa makan siang ya. Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.'
+    },
+    sore: {
+      greet: 'Met sore! 🌇',
+      headline: 'Sore santai, tugas tetap kelar.',
+      sub: 'Sisa tenaga masih ada? Gas satu sesi lagi, atau rapikan daftar pustaka biar besok tinggal lanjut. Readlify bantu semuanya jadi ringan.',
+      dlTitle: 'Sore-sore, sambil santai, install aja.',
+      dlSub: 'Satu klik, kamu dibawa ke halaman rilis di GitHub. Ambil berkas terbaru dan pasang.',
+      foot: 'Sore yang tenang buat kamu. Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.'
+    },
+    malam: {
+      greet: 'Met malam! 🌙',
+      headline: 'Malam tenang, tugas nggak numpuk di kepala.',
+      sub: 'Tuang semua yang lagi dipikirin ke Readlify, pecah jadi langkah kecil, terus tutup hari dengan hati yang lebih ringan.',
+      dlTitle: 'Malam-malam, siapin Readlify buat besok.',
+      dlSub: 'Satu klik, kamu dibawa ke halaman rilis di GitHub. Ambil berkas terbaru dan pasang.',
+      foot: 'Selamat istirahat nanti ya. Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.'
+    },
+    tengah: {
+      greet: 'Masih melek? 🦉',
+      headline: 'Tengah malam begini, pecah tugasnya terus istirahat ya.',
+      sub: 'Kalau kepala masih ramai, buang dulu semua pikiran ke Catatan Cepat. Sisanya bisa lanjut besok. Tidur juga bagian dari produktif.',
+      dlTitle: 'Install sekarang, atau besok pagi juga boleh.',
+      dlSub: 'Linknya nggak ke mana-mana kok. Satu klik, kamu dibawa ke halaman rilis di GitHub.',
+      foot: 'Sudah larut, yuk istirahat. Dibuat pelan-pelan oleh @hasansatriah. Berlisensi MIT.'
+    }
+  };
+
+  function hourNow() {
+    var m = /[?&]jam=(\d{1,2})/.exec(location.search); // ?jam=22 buat mencoba
+    return m ? Math.min(23, +m[1]) : new Date().getHours();
+  }
+  function period(h) {
+    if (h < 5) return 'tengah';
+    if (h < 11) return 'pagi';
+    if (h < 15) return 'siang';
+    if (h < 18) return 'sore';
+    return 'malam';
+  }
+
+  var root = document.documentElement, meta = document.querySelector('meta[name="theme-color"]');
+  var last = null;
+
+  function apply(first) {
+    var h = hourNow(), p = period(h);
+    var theme = (h >= 6 && h < 18) ? 'cozy-light' : 'cozy-dark';
+    if (root.getAttribute('data-theme') !== theme) root.setAttribute('data-theme', theme);
+    if (meta) meta.setAttribute('content', theme === 'cozy-dark' ? '#211E1A' : '#F7F1E7');
+    if (p === last) return;
+    last = p;
+    var c = COPY[p], nodes = document.querySelectorAll('[data-t]');
+    nodes.forEach(function (el) {
+      var txt = c[el.getAttribute('data-t')];
+      if (txt == null || el.textContent === txt) return;
+      if (first) { el.textContent = txt; return; }
+      el.classList.add('swap');
+      setTimeout(function () { el.textContent = txt; el.classList.remove('swap'); }, 250);
+    });
+    root.setAttribute('data-period', p);
+  }
+
+  apply(true);
+  setInterval(function () { apply(false); }, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) apply(false); });
+})();
+</script>
+</body>
+</html>
